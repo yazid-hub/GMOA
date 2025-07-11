@@ -1,0 +1,273 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Tableau de bord - GMAO App{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- En-tête -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Tableau de bord</h1>
+                <p class="text-gray-600">Bienvenue, {{ user.first_name|default:user.username }}</p>
+            </div>
+            <div class="flex space-x-3">
+                                         {% if user.is_authenticated and user_role in 'MANAGER ADMIN' %}
+
+                <a href="{% url 'creer_ordre_travail' %}" class="bg-gmao-600 hover:bg-gmao-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    Nouvel ordre de travail
+                </a>
+                <a href="{% url 'creer_intervention' %}" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    Nouvelle intervention
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques principales -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <!-- Ordres actifs -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                            <i class="fas fa-tasks text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Ordres actifs</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.ordres_actifs }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-5 py-3">
+                <div class="text-sm">
+                    <a href="{% url 'liste_ordres_travail' %}" class="font-medium text-gmao-700 hover:text-gmao-900">
+                        Voir tous les ordres
+                    </a>
+                </div>
+            </div>
+        </div>
+                         {% if user.is_authenticated and user_role in 'MANAGER ADMIN' %}
+
+        <!-- Interventions validées -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                            <i class="fas fa-clipboard-check text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Interventions validées</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.interventions_validees }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-5 py-3">
+                <div class="text-sm">
+                    <a href="{% url 'liste_interventions' %}" class="font-medium text-gmao-700 hover:text-gmao-900">
+                        Gérer les interventions
+                    </a>
+                </div>
+            </div>
+        </div>
+        <!-- Assets total -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-indigo-500 rounded-md flex items-center justify-center">
+                            <i class="fas fa-cog text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Assets total</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.assets_total }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-5 py-3">
+                <div class="text-sm">
+                    <a href="/admin/core/asset/" class="font-medium text-gmao-700 hover:text-gmao-900">
+                        Gérer les assets
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assets en panne -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-red-500 rounded-md flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Assets en panne</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.assets_en_panne }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-5 py-3">
+                <div class="text-sm">
+                    <a href="/admin/core/asset/?statut__exact=EN_PANNE" class="font-medium text-red-700 hover:text-red-900">
+                        Voir les pannes
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <!-- Contenu principal en deux colonnes -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <!-- Mes ordres de travail -->
+        <div class="lg:col-span-2">
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                        <i class="fas fa-user-clock mr-2 text-gmao-600"></i>
+                        Mes ordres de travail
+                    </h3>
+                </div>
+                <div class="p-6">
+                    {% if mes_ordres %}
+                    <div class="space-y-4">
+                        {% for ordre in mes_ordres %}
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div class="flex-1">
+                                <div class="flex items-center">
+                                    <h4 class="text-sm font-medium text-gray-900">{{ ordre.titre }}</h4>
+                                    <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {% if ordre.priorite == 4 %}bg-red-100 text-red-800
+                                        {% elif ordre.priorite == 3 %}bg-orange-100 text-orange-800
+                                        {% elif ordre.priorite == 2 %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {% if ordre.priorite == 4 %}Urgent
+                                        {% elif ordre.priorite == 3 %}Haute
+                                        {% elif ordre.priorite == 2 %}Normale
+                                        {% else %}Basse{% endif %}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1">{{ ordre.asset.nom }} - {{ ordre.intervention.nom }}</p>
+                                <p class="text-xs text-gray-400">Prévu le {{ ordre.date_prevue_debut|date:"d/m/Y à H:i" }}</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <a href="{% url 'detail_ordre_travail' ordre.pk %}" class="text-gmao-600 hover:text-gmao-900">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'commencer_intervention' ordre.pk %}" class="text-green-600 hover:text-green-900">
+                                    <i class="fas fa-play"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4 text-center">
+                        <a href="{% url 'liste_ordres_travail' %}?assigne_a={{ user.id }}" class="text-gmao-600 hover:text-gmao-900 text-sm font-medium">
+                            Voir tous mes ordres →
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <i class="fas fa-clipboard-list text-gray-300 text-4xl mb-4"></i>
+                        <p class="text-gray-500">Aucun ordre de travail assigné pour le moment.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne droite -->
+        <div class="space-y-6">
+            <!-- Assets critiques en panne -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                        <i class="fas fa-exclamation-triangle mr-2 text-red-600"></i>
+                        Assets critiques en panne
+                    </h3>
+                </div>
+                <div class="p-6">
+                    {% if assets_critiques %}
+                    <div class="space-y-3">
+                        {% for asset in assets_critiques %}
+                        <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-900">{{ asset.nom }}</h4>
+                                <p class="text-xs text-gray-500">{{ asset.reference|default:"Pas de référence" }}</p>
+                                <div class="flex items-center mt-1">
+                                    <span class="text-xs text-red-600 font-medium">Criticité: {{ asset.criticite }}/4</span>
+                                </div>
+                            </div>
+                            <div class="text-red-600">
+                                <i class="fas fa-exclamation-circle"></i>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-6">
+                        <i class="fas fa-check-circle text-green-300 text-3xl mb-3"></i>
+                        <p class="text-gray-500 text-sm">Aucun asset critique en panne.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Ordres récents -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                        <i class="fas fa-clock mr-2 text-gmao-600"></i>
+                        Ordres récents
+                    </h3>
+                </div>
+                <div class="p-6">
+                    {% if ordres_recents %}
+                    <div class="space-y-3">
+                        {% for ordre in ordres_recents|slice:":5" %}
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <h4 class="text-sm font-medium text-gray-900">{{ ordre.titre|truncatechars:30 }}</h4>
+                                <p class="text-xs text-gray-500">{{ ordre.asset.nom|truncatechars:25 }}</p>
+                                <p class="text-xs text-gray-400">{{ ordre.date_creation|timesince }} ago</p>
+                            </div>
+                            <a href="{% url 'detail_ordre_travail' ordre.pk %}" class="text-gmao-600 hover:text-gmao-900">
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4 text-center">
+                        <a href="{% url 'liste_ordres_travail' %}" class="text-gmao-600 hover:text-gmao-900 text-sm font-medium">
+                            Voir tout →
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-6">
+                        <i class="fas fa-clipboard text-gray-300 text-3xl mb-3"></i>
+                        <p class="text-gray-500 text-sm">Aucun ordre de travail récent.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

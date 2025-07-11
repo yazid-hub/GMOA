@@ -1,0 +1,511 @@
+<!-- core/templates/core/operation/supprimer_operation.html -->
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Supprimer l'opération - {{ operation.nom }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="bg-white shadow-sm rounded-lg">
+        <!-- En-tête -->
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <h1 class="text-xl font-bold text-gray-900">Confirmer la suppression</h1>
+                    <p class="text-sm text-gray-600">Cette action est irréversible</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenu -->
+        <div class="px-6 py-4">
+            <div class="mb-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-2">
+                    Êtes-vous sûr de vouloir supprimer le point de contrôle suivant ?
+                </h2>
+                
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-lg font-medium text-gray-900">{{ point.label }}</h3>
+                            <p class="text-sm text-gray-600">
+                                Opération : "{{ operation.nom }}" (Étape {{ operation.ordre }})
+                            </p>
+                            <p class="text-sm text-gray-500 mt-1">
+                                Type : {{ point.get_type_champ_display }}
+                                {% if point.est_obligatoire %}
+                                    • <span class="text-red-600 font-medium">Obligatoire</span>
+                                {% endif %}
+                            </p>
+                            {% if point.aide %}
+                                <p class="text-sm text-gray-500 mt-1 italic">{{ point.aide }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Avertissements -->
+            <div class="mb-6">
+                <div class="bg-red-50 border-l-4 border-red-400 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Attention !</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li>Ce point de contrôle sera définitivement supprimé</li>
+                                    <li>L'ordre des points de contrôle restants sera automatiquement réorganisé</li>
+                                    {% if reponses_existantes %}
+                                        <li class="font-medium text-red-800">
+                                            ⚠️ {{ nb_reponses }} réponse(s) associée(s) seront également supprimées
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if reponses_existantes %}
+                <div class="mb-6">
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-yellow-800">Données existantes</h3>
+                                <p class="mt-1 text-sm text-yellow-700">
+                                    Ce point de contrôle a déjà <strong>{{ nb_reponses }}</strong> réponse(s) saisie(s) 
+                                    dans des rapports d'exécution. Ces données seront perdues si vous continuez.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Caractéristiques du point -->
+            <div class="mb-6">
+                <h3 class="text-sm font-medium text-gray-900 mb-3">Caractéristiques du point de contrôle :</h3>
+                <div class="bg-gray-50 rounded-md p-3">
+                    <dl class="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Type de champ</dt>
+                            <dd class="text-sm text-gray-900">{{ point.get_type_champ_display }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Obligatoire</dt>
+                            <dd class="text-sm text-gray-900">
+                                {% if point.est_obligatoire %}
+                                    <span class="text-red-600">Oui</span>
+                                {% else %}
+                                    <span class="text-green-600">Non</span>
+                                {% endif %}
+                            </dd>
+                        </div>
+                        {% if point.options %}
+                            <div class="sm:col-span-2">
+                                <dt class="text-sm font-medium text-gray-500">Options disponibles</dt>
+                                <dd class="text-sm text-gray-900">{{ point.options }}</dd>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Médias autorisés</dt>
+                            <dd class="text-sm text-gray-900">
+                                {% if point.permettre_photo or point.permettre_audio or point.permettre_video %}
+                                    {% if point.permettre_photo %}📸 Photo{% endif %}
+                                    {% if point.permettre_audio %}🎙️ Audio{% endif %}
+                                    {% if point.permettre_video %}🎬 Vidéo{% endif %}
+                                {% else %}
+                                    Aucun
+                                {% endif %}
+                            </dd>
+                        </div>
+                        {% if point.peut_demander_reparation %}
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Demande de réparation</dt>
+                                <dd class="text-sm text-orange-600 font-medium">Autorisée</dd>
+                            </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row sm:justify-end gap-3">
+            <a href="{% url 'intervention_builder' intervention.pk %}" 
+               class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                Annuler
+            </a>
+            
+            <form method="post" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="confirmer_suppression" value="oui">
+                <button type="submit" 
+                        class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        onclick="return confirm('Êtes-vous absolument certain de vouloir supprimer ce point de contrôle ?')">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Supprimer définitivement
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- Modal de confirmation pour suppressions AJAX -->
+<!-- Ajoutez ceci dans votre template intervention_builder_enrichi.html -->
+
+<!-- Modal de confirmation de suppression -->
+<div id="confirmation-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-lg font-medium text-gray-900">Confirmer la suppression</h3>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4">
+                <p id="confirmation-message" class="text-sm text-gray-600"></p>
+                
+                <div id="confirmation-details" class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md hidden">
+                    <p class="text-sm text-yellow-800">
+                        <span class="font-medium">Attention :</span> 
+                        <span id="confirmation-warning"></span>
+                    </p>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+                <button type="button" id="cancel-deletion" 
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md text-sm font-medium">
+                    Annuler
+                </button>
+                <button type="button" id="confirm-deletion" 
+                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    Supprimer
+                </button>
+                <button type="button" id="force-deletion" 
+                        class="bg-red-800 hover:bg-red-900 text-white px-4 py-2 rounded-md text-sm font-medium hidden">
+                    Forcer la suppression
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales pour la gestion des suppressions
+let currentDeletionType = null;
+let currentDeletionId = null;
+let requiresConfirmation = false;
+
+// Fonction pour afficher le modal de confirmation
+function showConfirmationModal(type, id, name, hasResponses = false, responseCount = 0) {
+    currentDeletionType = type;
+    currentDeletionId = id;
+    requiresConfirmation = hasResponses;
+    
+    const modal = document.getElementById('confirmation-modal');
+    const message = document.getElementById('confirmation-message');
+    const details = document.getElementById('confirmation-details');
+    const warning = document.getElementById('confirmation-warning');
+    const forceBtn = document.getElementById('force-deletion');
+    
+    // Configurer le message selon le type
+    if (type === 'operation') {
+        message.textContent = `Êtes-vous sûr de vouloir supprimer l'opération "${name}" ?`;
+    } else {
+        message.textContent = `Êtes-vous sûr de vouloir supprimer le point de contrôle "${name}" ?`;
+    }
+    
+    // Afficher les détails si des réponses existent
+    if (hasResponses) {
+        warning.textContent = `${responseCount} réponse(s) seront également supprimées.`;
+        details.classList.remove('hidden');
+        forceBtn.classList.remove('hidden');
+    } else {
+        details.classList.add('hidden');
+        forceBtn.classList.add('hidden');
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+// Fonction pour fermer le modal
+function closeConfirmationModal() {
+    document.getElementById('confirmation-modal').classList.add('hidden');
+    currentDeletionType = null;
+    currentDeletionId = null;
+    requiresConfirmation = false;
+}
+
+// Event listeners pour les boutons du modal
+document.getElementById('cancel-deletion').addEventListener('click', closeConfirmationModal);
+
+document.getElementById('confirm-deletion').addEventListener('click', function() {
+    if (!requiresConfirmation) {
+        performDeletion(false);
+    } else {
+        // Si des réponses existent, ne pas permettre la suppression normale
+        showToast('Utilisez "Forcer la suppression" pour supprimer malgré les données existantes', 'warning');
+    }
+});
+
+document.getElementById('force-deletion').addEventListener('click', function() {
+    if (confirm('ATTENTION: Cette action supprimera définitivement toutes les données associées. Tapez "CONFIRMER" pour continuer.')) {
+        const confirmation = prompt('Tapez "CONFIRMER" pour forcer la suppression :');
+        if (confirmation === 'CONFIRMER') {
+            performDeletion(true);
+        }
+    }
+});
+
+// Fonction pour effectuer la suppression
+function performDeletion(force = false) {
+    const url = force 
+        ? `/api/forcer-suppression-${currentDeletionType}/${currentDeletionId}/`
+        : `/api/supprimer-${currentDeletionType}/${currentDeletionId}/`;
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    if (force) {
+        formData.append('confirmation', 'CONFIRMER_SUPPRESSION');
+    }
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Supprimer l'élément de l'interface
+            const element = document.querySelector(`[data-${currentDeletionType}-id="${currentDeletionId}"]`);
+            if (element) {
+                element.remove();
+            }
+            
+            showToast(data.message, 'success');
+            closeConfirmationModal();
+            
+            // Mettre à jour les numéros d'ordre si nécessaire
+            if (currentDeletionType === 'operation') {
+                updateStepNumbers();
+            }
+        } else {
+            showToast(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur de connexion', 'error');
+    });
+}
+
+// Modifier les event listeners existants pour utiliser le modal
+document.addEventListener('DOMContentLoaded', function() {
+    // Suppression des opérations avec confirmation
+    document.querySelectorAll('.delete-operation').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const operationId = this.getAttribute('data-operation-id');
+            const operationCard = document.querySelector(`[data-operation-id="${operationId}"]`);
+            const operationName = operationCard.querySelector('h3').textContent;
+            
+            // Vérifier d'abord s'il y a des réponses
+            fetch(`/api/verifier-suppression-operation/${operationId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    showConfirmationModal(
+                        'operation', 
+                        operationId, 
+                        operationName,
+                        data.has_responses,
+                        data.response_count
+                    );
+                })
+                .catch(() => {
+                    // En cas d'erreur, afficher le modal sans vérification
+                    showConfirmationModal('operation', operationId, operationName);
+                });
+        });
+    });
+    
+    // Suppression des points de contrôle avec confirmation
+    document.querySelectorAll('.delete-point').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const pointId = this.getAttribute('data-point-id');
+            const pointCard = document.querySelector(`[data-point-id="${pointId}"]`);
+            const pointName = pointCard.querySelector('h5').textContent;
+            
+            // Vérifier d'abord s'il y a des réponses
+            fetch(`/api/verifier-suppression-point/${pointId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    showConfirmationModal(
+                        'point-controle', 
+                        pointId, 
+                        pointName,
+                        data.has_responses,
+                        data.response_count
+                    );
+                })
+                .catch(() => {
+                    // En cas d'erreur, afficher le modal sans vérification
+                    showConfirmationModal('point-controle', pointId, pointName);
+                });
+        });
+    });
+});
+
+// Fermer le modal en cliquant à l'extérieur
+document.getElementById('confirmation-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeConfirmationModal();
+    }
+});
+</script>>
+                </div>
+                <div class="ml-4">
+                    <h1 class="text-xl font-bold text-gray-900">Confirmer la suppression</h1>
+                    <p class="text-sm text-gray-600">Cette action est irréversible</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenu -->
+        <div class="px-6 py-4">
+            <div class="mb-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-2">
+                    Êtes-vous sûr de vouloir supprimer l'opération suivante ?
+                </h2>
+                
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-lg font-medium text-gray-900">{{ operation.nom }}</h3>
+                            <p class="text-sm text-gray-600">Étape {{ operation.ordre }} de l'intervention "{{ intervention.nom }}"</p>
+                            <p class="text-sm text-gray-500 mt-1">{{ nb_points_total }} point(s) de contrôle associé(s)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Avertissements -->
+            <div class="mb-6">
+                <div class="bg-red-50 border-l-4 border-red-400 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Attention !</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li>Cette opération et tous ses points de contrôle seront définitivement supprimés</li>
+                                    <li>L'ordre des opérations restantes sera automatiquement réorganisé</li>
+                                    {% if points_avec_reponses %}
+                                        <li class="font-medium text-red-800">
+                                            ⚠️ Des réponses existent pour certains points de contrôle et seront également supprimées :
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Détail des points avec réponses -->
+            {% if points_avec_reponses %}
+                <div class="mb-6">
+                    <h3 class="text-sm font-medium text-gray-900 mb-3">Points de contrôle avec réponses existantes :</h3>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-md">
+                        <div class="px-4 py-3">
+                            {% for item in points_avec_reponses %}
+                                <div class="flex items-center justify-between py-1">
+                                    <span class="text-sm text-gray-700">{{ item.point.label }}</span>
+                                    <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                                        {{ item.nb_reponses }} réponse(s)
+                                    </span>
+                                </div>
+                                {% if not forloop.last %}
+                                    <hr class="my-2 border-yellow-200">
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Actions -->
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row sm:justify-end gap-3">
+            <a href="{% url 'intervention_builder' intervention.pk %}" 
+               class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                Annuler
+            </a>
+            
+            <form method="post" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="confirmer_suppression" value="oui">
+                <button type="submit" 
+                        class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        onclick="return confirm('Êtes-vous absolument certain de vouloir supprimer cette opération ?')">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Supprimer définitivement
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

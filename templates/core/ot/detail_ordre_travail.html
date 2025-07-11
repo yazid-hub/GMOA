@@ -1,0 +1,416 @@
+
+{% extends 'core/base.html' %}
+{% load custom_filters %}
+
+{% block title %}Ordre de Travail - {{ ordre_de_travail.titre }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- En-tête de l'ordre de travail -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-gmao-500 to-gmao-600 px-6 py-4">
+            <div class="flex items-center justify-between text-white">
+                <div>
+                    <h1 class="text-2xl font-bold">{{ ordre_de_travail.titre }}</h1>
+                    <p class="text-gmao-100">OT-{{ ordre_de_travail.id }} • {{ ordre_de_travail.get_type_OT_display }}</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    {% if ordre_de_travail.statut %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20 text-white">
+                        {{ ordre_de_travail.statut.nom }}
+                    </span>
+                    {% endif %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ ordre_de_travail.priorite|priority_class }}">
+                        {{ ordre_de_travail.priorite|priority_text }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informations principales -->
+        <div class="px-6 py-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Équipement</h3>
+                    <p class="mt-1 text-lg font-semibold text-gray-900">{{ ordre_de_travail.asset.nom }}</p>
+                    <p class="text-sm text-gray-600">{{ ordre_de_travail.asset.reference|default:"Pas de référence" }}</p>
+                    <p class="text-sm text-gray-500">{{ ordre_de_travail.asset.localisation_texte|default:"Localisation non définie" }}</p>
+                </div>
+                
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Intervention</h3>
+                    <p class="mt-1 text-lg font-semibold text-gray-900">{{ ordre_de_travail.intervention.nom }}</p>
+                    <p class="text-sm text-gray-600">{{ ordre_de_travail.intervention.duree_estimee_heures }}h estimées</p>
+                    <p class="text-sm text-gray-500">{{ ordre_de_travail.intervention.techniciens_requis }} technicien{{ ordre_de_travail.intervention.techniciens_requis|pluralize }} requis</p>
+                </div>
+                
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Assignation</h3>
+                    {% if ordre_de_travail.assigne_a_technicien %}
+                    <p class="mt-1 text-lg font-semibold text-gray-900">
+                        <i class="fas fa-user mr-1"></i>
+                        {{ ordre_de_travail.assigne_a_technicien.get_full_name|default:ordre_de_travail.assigne_a_technicien.username }}
+                    </p>
+                    {% elif ordre_de_travail.assigne_a_equipe %}
+                    <p class="mt-1 text-lg font-semibold text-gray-900">
+                        <i class="fas fa-users mr-1"></i>
+                        {{ ordre_de_travail.assigne_a_equipe.nom }}
+                    </p>
+                    {% else %}
+                    <p class="mt-1 text-lg font-semibold text-red-600">Non assigné</p>
+                    {% endif %}
+                    <p class="text-sm text-gray-500">Créé par {{ ordre_de_travail.cree_par.get_full_name|default:ordre_de_travail.cree_par.username }}</p>
+                </div>
+                
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Planning</h3>
+                    <p class="mt-1 text-lg font-semibold text-gray-900">{{ ordre_de_travail.date_prevue_debut|date:"d/m/Y" }}</p>
+                    <p class="text-sm text-gray-600">{{ ordre_de_travail.date_prevue_debut|time:"H:i" }}</p>
+                    {% if ordre_de_travail.date_debut_reel %}
+                    <p class="text-sm text-green-600">
+                        <i class="fas fa-play mr-1"></i>
+                        Démarrée le {{ ordre_de_travail.date_debut_reel|date:"d/m à H:i" }}
+                    </p>
+                    {% endif %}
+                    {% if ordre_de_travail.date_fin_reelle %}
+                    <p class="text-sm text-blue-600">
+                        <i class="fas fa-check mr-1"></i>
+                        Terminée le {{ ordre_de_travail.date_fin_reelle|date:"d/m à H:i" }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions disponibles -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+            <i class="fas fa-bolt mr-2 text-yellow-500"></i>
+            Actions disponibles
+        </h3>
+        
+        <div class="flex flex-wrap gap-3">
+            {% if peut_executer and not ordre_de_travail.statut.est_statut_final %}
+                {% if not rapport.date_execution_debut %}
+                <a href="{% url 'commencer_intervention' ordre_de_travail.pk %}" 
+                   class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md font-medium flex items-center">
+                    <i class="fas fa-play mr-2"></i>
+                    Commencer l'intervention
+                </a>
+                {% elif rapport.statut_rapport != 'FINALISE' %}
+                <a href="{% url 'executer_intervention' ordre_de_travail.pk %}" 
+                   class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md font-medium flex items-center">
+                    <i class="fas fa-edit mr-2"></i>
+                    Continuer l'intervention
+                </a>
+                {% endif %}
+            {% endif %}
+            
+            {% if user_role in 'MANAGER,ADMIN' %}
+            <a href="{% url 'modifier_ordre_travail' ordre_de_travail.pk %}" 
+               class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-md font-medium flex items-center">
+                <i class="fas fa-edit mr-2"></i>
+                Modifier l'ordre
+            </a>
+            {% endif %}
+            
+            {% if rapport.statut_rapport == 'FINALISE' %}
+            <a href="{% url 'export_rapport_pdf' rapport.pk %}" 
+               class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-md font-medium flex items-center">
+                <i class="fas fa-download mr-2"></i>
+                Exporter le rapport PDF
+            </a>
+            {% endif %}
+            
+            <a href="{% url 'liste_ordres_travail' %}" 
+               class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-md font-medium flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Retour à la liste
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Colonne principale : Détails de l'intervention -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Description de l'intervention -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+                    Description de l'intervention
+                </h3>
+                
+                <p class="text-gray-700 mb-4">{{ ordre_de_travail.intervention.description|default:"Aucune description disponible." }}</p>
+                
+                <!-- Aperçu des opérations -->
+                {% if ordre_de_travail.intervention.operations.all %}
+                <h4 class="font-medium text-gray-900 mb-3">Opérations à réaliser :</h4>
+                <div class="space-y-2">
+                    {% for operation in ordre_de_travail.intervention.operations.all %}
+                    <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gmao-100 text-gmao-800 text-sm font-bold">
+                            {{ operation.ordre }}
+                        </span>
+                        <div class="flex-1">
+                            <h5 class="font-medium text-gray-900">{{ operation.nom }}</h5>
+                            <p class="text-sm text-gray-600">{{ operation.points_de_controle.count }} point{{ operation.points_de_controle.count|pluralize }} de contrôle</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Progression de l'exécution -->
+            {% if rapport.date_execution_debut %}
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-chart-line mr-2 text-green-500"></i>
+                    Progression de l'exécution
+                </h3>
+                
+                {% with total_points=0 points_remplis=0 %}
+                {% for operation in ordre_de_travail.intervention.operations.all %}
+                    {% for point in operation.points_de_controle.all %}
+                        {% with total_points=total_points|add:1 %}
+                            {% if point.id in reponses_ids %}
+                            {% with points_remplis=points_remplis|add:1 %}{% endwith %}
+                        {% endif %}
+                        {% endwith %}
+                    {% endfor %}
+                {% endfor %}
+                
+                {% if total_points > 0 %}
+                {% with pourcentage=points_remplis|floatformat:0|mul:100|div:total_points %}
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>{{ points_remplis }} / {{ total_points }} points complétés</span>
+                        <span>{{ pourcentage|floatformat:0 }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-green-500 h-2 rounded-full" style="width: {{ pourcentage }}%"></div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">Démarrée le :</span>
+                        <span class="font-medium">{{ rapport.date_execution_debut|date:"d/m/Y à H:i" }}</span>
+                    </div>
+                    {% if rapport.date_execution_fin %}
+                    <div>
+                        <span class="text-gray-500">Terminée le :</span>
+                        <span class="font-medium">{{ rapport.date_execution_fin|date:"d/m/Y à H:i" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endwith %}
+                {% else %}
+                <p class="text-gray-500">Aucun point de contrôle défini pour cette intervention.</p>
+                {% endif %}
+                {% endwith %}
+            </div>
+            {% endif %}
+
+            <!-- Commentaires -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-comments mr-2 text-purple-500"></i>
+                    Commentaires ({{ commentaires.count }})
+                </h3>
+                
+                {% if user_role in 'MANAGER,ADMIN,TECHNICIEN,OPERATEUR' %}
+                <form method="post" class="mb-6">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_comment">
+                    <div class="flex space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="h-8 w-8 rounded-full bg-gmao-100 flex items-center justify-center">
+                                <span class="text-sm font-medium text-gmao-700">
+                                    {{ user.first_name.0|default:user.username.0|upper }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <textarea name="contenu" rows="2" 
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500" 
+                                      placeholder="Ajouter un commentaire..."></textarea>
+                            <div class="mt-2 flex justify-end">
+                                <button type="submit" 
+                                        class="bg-gmao-600 hover:bg-gmao-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                    Ajouter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                {% endif %}
+                
+                <div class="space-y-4">
+                    {% for commentaire in commentaires %}
+                    <div class="flex space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                <span class="text-sm font-medium text-gray-700">
+                                    {{ commentaire.auteur.first_name.0|default:commentaire.auteur.username.0|upper }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ commentaire.auteur.get_full_name|default:commentaire.auteur.username }}
+                                <span class="text-xs text-gray-500 ml-2">{{ commentaire.date_creation|timesince }} ago</span>
+                            </div>
+                            <p class="text-sm text-gray-700">{{ commentaire.contenu }}</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 text-center py-4">Aucun commentaire pour le moment.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne droite : Informations complémentaires -->
+        <div class="space-y-6">
+            <!-- Statut et suivi -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-tasks mr-2 text-blue-500"></i>
+                    Suivi de l'ordre
+                </h3>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Statut actuel :</span>
+                        <span class="text-sm font-medium {{ ordre_de_travail.statut.nom|lower }}">
+                            {{ ordre_de_travail.statut.nom|default:"Nouveau" }}
+                        </span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Priorité :</span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ ordre_de_travail.priorite|priority_class }}">
+                            {{ ordre_de_travail.priorite|priority_text }}
+                        </span>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Date création :</span>
+                        <span class="text-sm font-medium">{{ ordre_de_travail.date_creation|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    
+                    {% if ordre_de_travail.date_debut_reel %}
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Temps écoulé :</span>
+                        <span class="text-sm font-medium">
+                            {% if ordre_de_travail.date_fin_reelle %}
+                                {% with duree=ordre_de_travail.date_fin_reelle|sub:ordre_de_travail.date_debut_reel %}
+                                {{ duree|floatformat:1 }}h
+                                {% endwith %}
+                            {% else %}
+                                En cours...
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions correctives -->
+            {% if actions_correctives %}
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2 text-orange-500"></i>
+                    Actions correctives ({{ actions_correctives.count }})
+                </h3>
+                
+                <div class="space-y-3">
+                    {% for action in actions_correctives %}
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <h4 class="font-medium text-gray-900 text-sm">{{ action.titre }}</h4>
+                        <p class="text-xs text-gray-600 mt-1">{{ action.description|truncatechars:100 }}</p>
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ action.priorite|priority_class }}">
+                                {{ action.get_priorite_display }}
+                            </span>
+                            <span class="text-xs text-gray-500">{{ action.date_creation|date:"d/m" }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Informations sur l'équipement -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-cog mr-2 text-gray-500"></i>
+                    Informations équipement
+                </h3>
+                
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <span class="text-gray-600">Nom :</span>
+                        <span class="font-medium">{{ ordre_de_travail.asset.nom }}</span>
+                    </div>
+                    
+                    {% if ordre_de_travail.asset.reference %}
+                    <div>
+                        <span class="text-gray-600">Référence :</span>
+                        <span class="font-medium">{{ ordre_de_travail.asset.reference }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if ordre_de_travail.asset.marque %}
+                    <div>
+                        <span class="text-gray-600">Marque :</span>
+                        <span class="font-medium">{{ ordre_de_travail.asset.marque }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if ordre_de_travail.asset.modele %}
+                    <div>
+                        <span class="text-gray-600">Modèle :</span>
+                        <span class="font-medium">{{ ordre_de_travail.asset.modele }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div>
+                        <span class="text-gray-600">Statut :</span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
+                            {% if ordre_de_travail.asset.statut == 'EN_SERVICE' %}bg-green-100 text-green-800
+                            {% elif ordre_de_travail.asset.statut == 'EN_PANNE' %}bg-red-100 text-red-800
+                            {% elif ordre_de_travail.asset.statut == 'EN_MAINTENANCE' %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ ordre_de_travail.asset.get_statut_display }}
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="text-gray-600">Criticité :</span>
+                        <span class="font-medium">{{ ordre_de_travail.asset.criticite }}/4</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh pour les ordres en cours
+{% if not ordre_de_travail.statut.est_statut_final %}
+setInterval(function() {
+    // Vérifier s'il y a des mises à jour
+    fetch(window.location.href + '?ajax=1')
+        .then(response => response.json())
+        .then(data => {
+            if (data.updated) {
+                location.reload();
+            }
+        });
+}, 30000); // Refresh toutes les 30 secondes
+{% endif %}
+</script>
+{% endblock %}

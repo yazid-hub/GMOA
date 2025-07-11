@@ -1,0 +1,1751 @@
+
+{% extends 'core/base.html' %}
+{% load custom_filters %}
+
+{% block title %}Constructeur d'Intervention - {{ intervention.nom }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Animation pour les zones de drop */
+.points-container.drop-zone-active {
+    min-height: 60px;
+    transition: all 0.3s ease;
+}
+
+/* Style pour l'élément en cours de drag */
+.sortable-drag {
+    opacity: 0.5;
+}
+
+/* Améliorer la visibilité pendant le drag */
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: #dbeafe !important;
+    border: 2px dashed #3b82f6 !important;
+}
+
+.sortable-chosen {
+    background-color: #eff6ff !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* S'assurer que les containers vides sont visibles */
+[id^="points-container-"]:empty::before {
+    content: "Déposez des points ici";
+    display: block;
+    padding: 20px;
+    text-align: center;
+    color: #9ca3af;
+    font-style: italic;
+    border: 2px dashed #e5e7eb;
+    border-radius: 0.5rem;
+}
+.operation-card {
+    transition: all 0.3s ease;
+}
+.operation-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+.point-controle {
+    border-left: 4px solid #0ea5e9;
+    background: linear-gradient(90deg, #f0f9ff 0%, #ffffff 100%);
+}
+.drag-handle {
+    cursor: move;
+}
+.sortable-ghost {
+    opacity: 0.4;
+}
+/* Classes pour Sortable.js avec Tailwind */
+.sortable-ghost {
+    @apply opacity-50 bg-blue-50 border-2 border-blue-300 border-dashed;
+}
+
+.sortable-chosen {
+    @apply shadow-lg scale-105 bg-blue-50;
+}
+
+.sortable-drag {
+    @apply opacity-0;
+}
+
+/* Curseur de déplacement */
+.drag-handle {
+    @apply cursor-move;
+}
+
+.drag-handle:hover {
+    @apply text-gray-700;
+}
+
+/* Animation de transition */
+.sortable-transition {
+    @apply transition-all duration-150 ease-in-out;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- En-tête avec actions -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-tools mr-3 text-gmao-600"></i>
+                    Constructeur d'Intervention
+                </h1>
+                <p class="text-gray-600 mt-1">{{ intervention.nom }}</p>
+                <div class="mt-2 flex items-center space-x-4 text-sm">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                        {% if intervention.statut == 'DRAFT' %}bg-yellow-100 text-yellow-800
+                        {% elif intervention.statut == 'VALIDATED' %}bg-green-100 text-green-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ intervention.get_statut_display }}
+                    </span>
+                    <span class="text-gray-500">{{ operations.count }} opération{{ operations.count|pluralize }}</span>
+                    <span class="text-gray-500">
+                        {{ total_points }} point{{ total_points|pluralize }} de contrôle au total
+                    </span>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                {% if intervention.statut == 'DRAFT' %}
+                <button onclick="validerIntervention()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    <i class="fas fa-check mr-2"></i>
+                    Valider l'intervention
+                </button>
+                {% endif %}
+                <a href="{% url 'liste_interventions' %}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Colonne principale : Opérations -->
+        <div class="lg:col-span-3 space-y-6">
+            <!-- Informations de base de l'intervention -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-info-circle mr-2 text-gmao-600"></i>
+                    Informations générales
+                </h3>
+                
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_intervention">
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nom de l'intervention</label>
+                            {{ intervention_form.nom }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+                            {{ intervention_form.statut }}
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        {{ intervention_form.description }}
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Durée estimée (heures)</label>
+                            {{ intervention_form.duree_estimee_heures }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Techniciens requis</label>
+                            {{ intervention_form.techniciens_requis }}
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-save mr-2"></i>
+                        Sauvegarder les informations
+                    </button>
+                </form>
+            </div>
+
+            <!-- Liste des opérations -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                        <i class="fas fa-list-ol mr-2 text-gmao-600"></i>
+                        Opérations de l'intervention
+                    </h3>
+                    <button onclick="openAddOperationModal()" class="bg-gmao-600 hover:bg-gmao-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-plus mr-2"></i>
+                        Ajouter une opération
+                    </button>
+                </div>
+                
+                <div id="operations-container" class="divide-y divide-gray-200">
+                    {% for operation in operations %}
+                    <div class="operation-card p-6" data-operation-id="{{ operation.id }}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start space-x-4 flex-1">
+                                <div class="drag-handle text-gray-400 hover:text-gray-600 mt-1">
+                                    <i class="fas fa-grip-vertical"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gmao-100 text-gmao-800 text-sm font-bold">
+                                            {{ operation.ordre }}
+                                        </span>
+                                        <h4 class="text-lg font-medium text-gray-900">{{ operation.nom }}</h4>
+                                    </div>
+                                    
+                                  <!-- Points de contrôle de cette opération -->
+                                <div class="mt-4 space-y-3" id="points-container-{{ operation.id }}">
+                                    {% for point in operation.points_de_controle.all %}
+                                    <div class="point-controle p-4 rounded-lg border border-gray-200 hover:border-gmao-300 transition-colors cursor-move" 
+                                        data-point-id="{{ point.id }}" data-operation-id="{{ operation.id }}">
+                                        <div class="flex items-start justify-between">
+                                            <div class="flex items-start space-x-3 flex-1">
+                                                <!-- Handle de drag -->
+                                                <div class="drag-handle-point text-gray-400 hover:text-gray-600 mt-1 cursor-move">
+                                                    <i class="fas fa-grip-vertical"></i>
+                                                </div>
+                                                
+                                                <div class="flex-1">
+                                                    <div class="flex items-center space-x-2 mb-2">
+                                                        <span class="text-sm font-medium text-gray-900">{{ point.label }}</span>
+                                                        {% if point.est_obligatoire %}
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                                            Obligatoire
+                                                        </span>
+                                                        {% endif %}
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                            {{ point.get_type_champ_display }}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    {% if point.aide %}
+                                                    <p class="text-sm text-gray-600 mb-2">{{ point.aide }}</p>
+                                                    {% endif %}
+                                                    
+                                                    {% if point.options %}
+                                                    <div class="text-xs text-gray-500 mb-2">
+                                                        Options: {{ point.options|split:';'|join:', ' }}
+                                                    </div>
+                                                    {% endif %}
+                                                    
+                                                    <!-- Types de médias autorisés -->
+                                                    <div class="flex items-center space-x-2 mt-2">
+                                                        {% if point.permettre_photo %}
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-100 text-green-800">
+                                                            <i class="fas fa-camera mr-1"></i> Photos
+                                                        </span>
+                                                        {% endif %}
+                                                        {% if point.permettre_audio %}
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
+                                                            <i class="fas fa-microphone mr-1"></i> Audio
+                                                        </span>
+                                                        {% endif %}
+                                                        {% if point.permettre_video %}
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-800">
+                                                            <i class="fas fa-video mr-1"></i> Vidéo
+                                                        </span>
+                                                        {% endif %}
+                                                        {% if point.types_fichiers_autorises %}
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-800">
+                                                            <i class="fas fa-file mr-1"></i> {{ point.types_fichiers_autorises }}
+                                                        </span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="flex items-center space-x-2 ml-4">
+                                                <button onclick="editPoint({{ point.id }})" 
+                                                        class="text-blue-600 hover:text-blue-900 p-2 rounded hover:bg-blue-50" 
+                                                        title="Modifier">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button onclick="deletePoint({{ point.id }})" 
+                                                        class="text-red-600 hover:text-red-900 p-2 rounded hover:bg-red-50" 
+                                                        title="Supprimer">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                    
+                                    <!-- Bouton ajouter point de contrôle -->
+                                    <button onclick="openAddPointModal({{ operation.id }})" 
+                                            class="w-full border-2 border-dashed border-gray-300 hover:border-gmao-500 hover:bg-gmao-50 rounded-lg p-4 text-gray-600 hover:text-gmao-600 transition-colors">
+                                        <i class="fas fa-plus mr-2"></i>
+                                        Ajouter un point de contrôle
+                                    </button>
+                                </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center space-x-2 ml-4">
+                                <button onclick="editOperation({{ operation.id }})" class="text-blue-600 hover:text-blue-900">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteOperation({{ operation.id }})" class="text-red-600 hover:text-red-900">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="p-12 text-center text-gray-500">
+                        <i class="fas fa-clipboard-list text-4xl mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune opération</h3>
+                        <p class="text-gray-600 mb-4">Commencez par ajouter votre première opération à cette intervention.</p>
+                        <button onclick="openAddOperationModal()" class="bg-gmao-600 hover:bg-gmao-700 text-white px-6 py-3 rounded-md font-medium">
+                            <i class="fas fa-plus mr-2"></i>
+                            Ajouter une opération
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Panneau latéral : Actions et aide -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Actions rapides -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-bolt mr-2 text-yellow-500"></i>
+                    Actions rapides
+                </h3>
+                
+                <div class="space-y-3">
+                    <button onclick="duplicateIntervention()" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-copy mr-2"></i>
+                        Dupliquer l'intervention
+                    </button>
+                    
+                    <button onclick="previewIntervention()" class="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-eye mr-2"></i>
+                        Aperçu terrain
+                    </button>
+                    
+                    <button onclick="exportIntervention()" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-download mr-2"></i>
+                        Exporter PDF
+                    </button>
+                </div>
+            </div>
+
+            <!-- Types de points de contrôle -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+                    Types de contrôles
+                </h3>
+                
+                <div class="space-y-3 text-sm">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                        <span><strong>Conforme/Non conforme</strong> - Vérification binaire</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 bg-blue-500 rounded-full"></span>
+                        <span><strong>Liste de choix</strong> - Sélection parmi options</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 bg-purple-500 rounded-full"></span>
+                        <span><strong>Mesure numérique</strong> - Valeur à saisir</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 bg-orange-500 rounded-full"></span>
+                        <span><strong>Commentaire</strong> - Texte libre</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 bg-red-500 rounded-full"></span>
+                        <span><strong>Date/Heure</strong> - Horodatage</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistiques -->
+         <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-chart-bar mr-2 text-green-500"></i>
+                Statistiques
+            </h3>
+            
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Opérations:</span>
+                    <span class="text-sm font-medium">{{ operations.count }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Points de contrôle:</span>
+                    <span class="text-sm font-medium">{{ total_points }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Points obligatoires:</span>
+                    <span class="text-sm font-medium text-red-600">{{ points_obligatoires }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Durée estimée:</span>
+                    <span class="text-sm font-medium">{{ intervention.duree_estimee_heures }}h</span>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajouter Opération -->
+<div id="addOperationModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Ajouter une opération</h3>
+            
+            <form method="post" id="addOperationForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_operation">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nom de l'opération</label>
+                    <input type="text" name="nom" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500" placeholder="Ex: Contrôle visuel général">
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeAddOperationModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md">
+                        Annuler
+                    </button>
+                    <button type="submit" class="bg-gmao-600 hover:bg-gmao-700 text-white px-4 py-2 rounded-md">
+                        Ajouter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajouter Point de Contrôle -->
+<div id="addPointModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Ajouter un point de contrôle</h3>
+            
+            <form method="post" id="addPointForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_point">
+                <input type="hidden" name="operation_id" id="pointOperationId">
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Libellé du point de contrôle
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="label" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500" placeholder="Ex: Niveau d'huile conforme">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Type de contrôle</label>
+                        <select name="type_champ" id="typeChamp" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500">
+                            <option value="BOOLEAN">Conforme / Non conforme</option>
+                            <option value="SELECT">Liste de choix</option>
+                            <option value="NUMBER">Mesure numérique</option>
+                            <option value="TEXT">Texte court</option>
+                            <option value="TEXTAREA">Commentaire long</option>
+                            <option value="DATE">Date</option>
+                            <option value="TIME">Heure</option>
+                            <option value="DATETIME">Date et heure</option>
+                        </select>
+                    </div>
+                    
+                    <div id="optionsContainer" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Options de choix</label>
+                        <textarea name="options" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500" placeholder="Conforme;Non conforme;Non applicable"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Séparez les options par un point-virgule (;)</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Instructions / Aide</label>
+                        <textarea name="aide" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500" placeholder="Instructions pour le technicien..."></textarea>
+                    </div>
+                    
+                    <div class="flex items-center space-x-6">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="est_obligatoire" class="h-4 w-4 text-gmao-600 focus:ring-gmao-500 border-gray-300 rounded">
+                            <span class="ml-2 text-sm text-gray-700">Point obligatoire</span>
+                        </label>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Médias autorisés</label>
+                        <div class="flex items-center space-x-6">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permettre_photo" class="h-4 w-4 text-gmao-600 focus:ring-gmao-500 border-gray-300 rounded">
+                                <span class="ml-2 text-sm text-gray-700">Photos</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permettre_audio" class="h-4 w-4 text-gmao-600 focus:ring-gmao-500 border-gray-300 rounded">
+                                <span class="ml-2 text-sm text-gray-700">Audio</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permettre_video" class="h-4 w-4 text-gmao-600 focus:ring-gmao-500 border-gray-300 rounded">
+                                <span class="ml-2 text-sm text-gray-700">Vidéo</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" 
+                            id="permettre_fichiers" 
+                            name="permettre_fichiers"
+                            onchange="toggleFileTypesField()"
+                            class="h-4 w-4 text-gmao-600 focus:ring-gmao-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Autoriser les fichiers</span>
+                    </label>
+                </div>
+
+                <div id="file_types_field" class="mt-2 hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Types de fichiers autorisés
+                    </label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="file_types" value="pdf" class="mr-2">
+                            <span class="text-sm">PDF</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="file_types" value="doc,docx" class="mr-2">
+                            <span class="text-sm">Word</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="file_types" value="xls,xlsx" class="mr-2">
+                            <span class="text-sm">Excel</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="file_types" value="zip,rar" class="mr-2">
+                            <span class="text-sm">Archives</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="file_types" value="jpg,jpeg,png" class="mr-2">
+                            <span class="text-sm">Images</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="file_types" value="txt,csv" class="mr-2">
+                            <span class="text-sm">Texte</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" onclick="closeAddPointModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md">
+                        Annuler
+                    </button>
+                    <button type="submit" class="bg-gmao-600 hover:bg-gmao-700 text-white px-4 py-2 rounded-md">
+                        Ajouter le point
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Éditer Opération -->
+<!-- Modal de modification d'opération -->
+<div id="editOperationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Modifier l'opération</h3>
+            <form id="editOperationForm">
+                {% csrf_token %}
+                <input type="hidden" id="edit_operation_id" name="operation_id">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Nom de l'opération
+                    </label>
+                    <input type="text" 
+                           id="edit_operation_nom" 
+                           name="nom" 
+                           required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500">
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" 
+                            onclick="closeEditOperationModal()"
+                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
+                        Annuler
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-gmao-600 text-white rounded hover:bg-gmao-700">
+                        Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de modification de point de contrôle -->
+<div id="editPointModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Modifier le point de contrôle</h3>
+            <form id="editPointForm">
+                {% csrf_token %}
+                <input type="hidden" id="edit_point_id" name="point_id">
+                
+                <div class="grid grid-cols-1 gap-4">
+                    <!-- Label -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Label <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" 
+                               id="edit_point_label" 
+                               name="label" 
+                               required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500">
+                    </div>
+                    
+                    <!-- Type de champ -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Type de champ <span class="text-red-500">*</span>
+                        </label>
+                        <select id="edit_point_type_champ" 
+                                name="type_champ" 
+                                required
+                                onchange="toggleEditOptionsField()"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500">
+                            <option value="TEXT">Texte court</option>
+                            <option value="TEXTAREA">Texte long</option>
+                            <option value="NUMBER">Nombre</option>
+                            <option value="DECIMAL">Décimal</option>
+                            <option value="BOOLEAN">Oui/Non</option>
+                            <option value="DATE">Date</option>
+                            <option value="DATETIME">Date et heure</option>
+                            <option value="SELECT">Liste déroulante</option>
+                            <option value="MULTISELECT">Choix multiples</option>
+                            <option value="PHOTO">Photo uniquement</option>
+                            <option value="SIGNATURE">Signature</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Options (pour SELECT et MULTISELECT) -->
+                    <div id="edit_options_field" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Options (séparées par des point-virgules)
+                        </label>
+                        <input type="text" 
+                               id="edit_point_options" 
+                               name="options"
+                               placeholder="Option 1;Option 2;Option 3"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500">
+                    </div>
+                    
+                    <!-- Aide -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Texte d'aide
+                        </label>
+                        <textarea id="edit_point_aide" 
+                                  name="aide"
+                                  rows="2"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500"></textarea>
+                    </div>
+                    
+                    <!-- Obligatoire -->
+                    <div class="flex items-center">
+                        <input type="checkbox" 
+                               id="edit_point_obligatoire" 
+                               name="est_obligatoire"
+                               class="h-4 w-4 text-gmao-600 focus:ring-gmao-500 border-gray-300 rounded">
+                        <label for="edit_point_obligatoire" class="ml-2 text-sm text-gray-700">
+                            Champ obligatoire
+                        </label>
+                    </div>
+                    
+                    <!-- Types de médias autorisés -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Types de médias autorisés
+                        </label>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" 
+                                       id="edit_permettre_photo" 
+                                       name="permettre_photo"
+                                       class="h-4 w-4 text-gmao-600 focus:ring-gmao-500 border-gray-300 rounded">
+                                <span class="ml-2 text-sm text-gray-700">Photos</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" 
+                                       id="edit_permettre_audio" 
+                                       name="permettre_audio"
+                                       class="h-4 w-4 text-gmao-600 focus:ring-gmao-500 border-gray-300 rounded">
+                                <span class="ml-2 text-sm text-gray-700">Audio</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" 
+                                       id="edit_permettre_video" 
+                                       name="permettre_video"
+                                       class="h-4 w-4 text-gmao-600 focus:ring-gmao-500 border-gray-300 rounded">
+                                <span class="ml-2 text-sm text-gray-700">Vidéo</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" 
+                            id="edit_permettre_fichiers" 
+                            name="permettre_fichiers"
+                            onchange="toggleEditFileTypesField()"
+                            class="h-4 w-4 text-gmao-600 focus:ring-gmao-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Autoriser les fichiers</span>
+                    </label>
+                </div>
+
+                <div id="edit_file_types_field" class="mt-2 hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Types de fichiers autorisés
+                    </label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="file_types" value="pdf" class="mr-2">
+                            <span class="text-sm">PDF</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="file_types" value="doc,docx" class="mr-2">
+                            <span class="text-sm">Word</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="file_types" value="xls,xlsx" class="mr-2">
+                            <span class="text-sm">Excel</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="file_types" value="zip,rar" class="mr-2">
+                            <span class="text-sm">Archives</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="file_types" value="jpg,jpeg,png" class="mr-2">
+                            <span class="text-sm">Images</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="file_types" value="txt,csv" class="mr-2">
+                            <span class="text-sm">Texte</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" 
+                            onclick="closeEditPointModal()"
+                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
+                        Annuler
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-gmao-600 text-white rounded hover:bg-gmao-700">
+                        Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmer Suppression -->
+<div id="confirmDeleteModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                    <i class="fas fa-exclamation-triangle text-red-600"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Confirmer la suppression</h3>
+                <p class="text-sm text-gray-500 mb-6" id="deleteMessage"></p>
+                
+                <div class="flex justify-center space-x-3">
+                    <button type="button" onclick="closeConfirmDeleteModal()" 
+                            class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md">
+                        Annuler
+                    </button>
+                    <button type="button" id="confirmDeleteButton" 
+                            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md">
+                        Supprimer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales pour les modales
+let currentEditOperationId = null;
+let currentEditPointId = null;
+let currentDeleteType = null;
+let currentDeleteId = null;
+
+// Fermer le modal
+function closeEditPointModal() {
+    document.getElementById('editPointModal').classList.add('hidden');
+}
+
+// Afficher/masquer le champ options selon le type
+function toggleEditOptionsField() {
+    const typeChamp = document.getElementById('edit_point_type_champ').value;
+    const optionsField = document.getElementById('edit_options_field');
+    
+    if (typeChamp === 'SELECT' || typeChamp === 'MULTISELECT') {
+        optionsField.classList.remove('hidden');
+    } else {
+        optionsField.classList.add('hidden');
+    }
+}
+function toggleEditFileTypesField() {
+    const checkbox = document.getElementById('edit_permettre_fichiers');
+    const field = document.getElementById('edit_file_types_field');
+    
+    if (checkbox.checked) {
+        field.classList.remove('hidden');
+    } else {
+        field.classList.add('hidden');
+        // Décocher toutes les cases quand on cache
+        field.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    }
+}
+function showToast(message, type = 'info') {
+    // Créer l'élément de notification
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full`;
+    
+    // Définir les couleurs selon le type
+    const colors = {
+        'success': 'bg-green-500 text-white',
+        'error': 'bg-red-500 text-white',
+        'info': 'bg-blue-500 text-white',
+        'warning': 'bg-yellow-500 text-white'
+    };
+    
+    toast.className += ' ' + (colors[type] || colors['info']);
+    
+    // Ajouter le contenu
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <span>${message}</span>
+        </div>
+    `;
+    
+    // Ajouter au body
+    document.body.appendChild(toast);
+    
+    // Animer l'entrée
+    setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+        toast.classList.add('translate-x-0');
+    }, 10);
+    
+    // Retirer après 3 secondes
+    setTimeout(() => {
+        toast.classList.add('translate-x-full');
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
+}
+// Fonctions pour les modales d'édition d'opération
+function editOperation(operationId) {
+    // Récupérer les données actuelles
+    const operationCard = document.querySelector(`[data-operation-id="${operationId}"]`);
+    const operationName = operationCard.querySelector('h4').textContent.trim();
+    
+    // Remplir le formulaire
+    document.getElementById('edit_operation_id').value = operationId;
+    document.getElementById('edit_operation_nom').value = operationName;
+    
+    // Afficher le modal
+    document.getElementById('editOperationModal').classList.remove('hidden');
+}
+
+function closeEditOperationModal() {
+    document.getElementById('editOperationModal').classList.add('hidden');
+    currentEditOperationId = null;
+}
+
+function toggleFileTypesField() {
+    const checkbox = document.getElementById('permettre_fichiers');
+    const field = document.getElementById('file_types_field');
+    
+    if (checkbox.checked) {
+        field.classList.remove('hidden');
+    } else {
+        field.classList.add('hidden');
+    }
+}
+// Fonctions pour les modales d'édition de point
+function editPoint(pointId) {
+    // Récupérer les données actuelles du point
+    fetch(`/points-controle/${pointId}/get-data/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const point = data.point;
+                
+                // Remplir le formulaire
+                document.getElementById('edit_point_id').value = pointId;
+                document.getElementById('edit_point_label').value = point.label;
+                document.getElementById('edit_point_type_champ').value = point.type_champ;
+                document.getElementById('edit_point_options').value = point.options || '';
+                document.getElementById('edit_point_aide').value = point.aide || '';
+                document.getElementById('edit_point_obligatoire').checked = point.est_obligatoire;
+                document.getElementById('edit_permettre_photo').checked = point.permettre_photo;
+                document.getElementById('edit_permettre_audio').checked = point.permettre_audio;
+                document.getElementById('edit_permettre_video').checked = point.permettre_video;
+                
+                // Gérer les fichiers
+                document.getElementById('edit_permettre_fichiers').checked = point.permettre_fichiers || false;
+                
+                // Afficher/masquer le champ des types de fichiers
+                toggleEditFileTypesField();
+                
+                // Cocher les types de fichiers autorisés
+                if (point.permettre_fichiers && point.types_fichiers_autorises) {
+                    const types = point.types_fichiers_autorises.split(',');
+                    document.querySelectorAll('#edit_file_types_field input[type="checkbox"]').forEach(cb => {
+                        cb.checked = types.some(type => cb.value.includes(type));
+                    });
+                }
+                
+                // Afficher/masquer le champ options
+                toggleEditOptionsField();
+                
+                // Afficher le modal
+                document.getElementById('editPointModal').classList.remove('hidden');
+            } else {
+                alert('Erreur lors du chargement des données');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur de connexion');
+        });
+}
+
+
+// Fonctions pour la suppression
+function deleteOperation(operationId) {
+    currentDeleteType = 'operation';
+    currentDeleteId = operationId;
+    
+    const operationElement = document.querySelector(`[data-operation-id="${operationId}"]`);
+    const operationName = operationElement.querySelector('h4').textContent.split('. ')[1];
+    
+    document.getElementById('deleteMessage').textContent = 
+        `Êtes-vous sûr de vouloir supprimer l'opération "${operationName}" et tous ses points de contrôle ?`;
+    
+    document.getElementById('confirmDeleteModal').classList.remove('hidden');
+}
+
+function deletePoint(pointId) {
+    currentDeleteType = 'point';
+    currentDeleteId = pointId;
+    
+    const pointElement = document.querySelector(`[data-point-id="${pointId}"]`);
+    const pointLabel = pointElement.querySelector('.text-sm.font-medium').textContent;
+    
+    document.getElementById('deleteMessage').textContent = 
+        `Êtes-vous sûr de vouloir supprimer le point de contrôle "${pointLabel}" ?`;
+    
+    document.getElementById('confirmDeleteModal').classList.remove('hidden');
+}
+
+function closeConfirmDeleteModal() {
+    document.getElementById('confirmDeleteModal').classList.add('hidden');
+    currentDeleteType = null;
+    currentDeleteId = null;
+}
+
+document.getElementById('editOperationForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const operationId = document.getElementById('edit_operation_id').value;
+    const nom = document.getElementById('edit_operation_nom').value;
+    
+    fetch(`/ajax/operation/${operationId}/edit/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: `nom=${encodeURIComponent(nom)}`
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Mettre à jour l'affichage
+            const operationCard = document.querySelector(`[data-operation-id="${operationId}"]`);
+            operationCard.querySelector('h4').textContent = nom;
+            
+            closeEditOperationModal();
+            console.log('✅ Opération modifiée');
+        } else {
+            alert('Erreur lors de la modification');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur: ' + error.message);
+    });
+});
+
+// Gérer la soumission du formulaire
+document.getElementById('editPointForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const pointId = document.getElementById('edit_point_id').value;
+    const formData = new FormData(this);
+    
+    fetch(`/ajax/point/${pointId}/edit/`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Fermer le modal
+            closeEditPointModal();
+            
+            // Créer et afficher un message de succès
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            messageDiv.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Point de contrôle modifié avec succès !</span>
+                </div>
+            `;
+            document.body.appendChild(messageDiv);
+            
+            // Retirer le message après 3 secondes puis recharger
+            setTimeout(() => {
+                messageDiv.remove();
+                location.reload();
+            }, 2000);
+            
+        } else {
+            alert('Erreur lors de la modification');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur de connexion');
+    });
+});
+// Gestionnaire pour la confirmation de suppression
+document.getElementById('confirmDeleteButton').addEventListener('click', function() {
+const url = currentDeleteType === 'operation' 
+    ? `{% url 'supprimer_operation_ajax' 0 %}`.replace('0', currentDeleteId)
+    : `{% url 'supprimer_point_de_controle_ajax' 0 %}`.replace('0', currentDeleteId);
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erreur lors de la suppression');
+        }
+    });
+});
+
+// Gérer l'affichage des options lors de l'édition
+document.getElementById('editPointTypeChamp').addEventListener('change', toggleEditOptionsContainer);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script>
+// Fonctions pour les modals
+function openAddOperationModal() {
+    document.getElementById('addOperationModal').classList.remove('hidden');
+}
+
+function closeAddOperationModal() {
+    document.getElementById('addOperationModal').classList.add('hidden');
+}
+
+function openAddPointModal(operationId) {
+    document.getElementById('pointOperationId').value = operationId;
+    document.getElementById('addPointModal').classList.remove('hidden');
+}
+
+function closeAddPointModal() {
+    document.getElementById('addPointModal').classList.add('hidden');
+}
+
+// Gestion du type de champ
+document.getElementById('typeChamp').addEventListener('change', function() {
+    const optionsContainer = document.getElementById('optionsContainer');
+    if (this.value === 'SELECT') {
+        optionsContainer.classList.remove('hidden');
+    } else {
+        optionsContainer.classList.add('hidden');
+    }
+});
+
+function validerIntervention() {
+    if (confirm('Êtes-vous sûr de vouloir valider cette intervention ? Elle ne pourra plus être modifiée.')) {
+        fetch('{% url "valider_intervention" intervention.id %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Intervention validée !');
+                location.reload();
+            }
+        });
+    }
+}
+
+function duplicateIntervention() {
+    alert('Duplication à implémenter');
+}
+
+function previewIntervention() {
+    // Ouvrir un aperçu de l'intervention comme la verrait un technicien
+    window.open(`/interventions/{{ intervention.id }}/preview/`, '_blank');
+}
+
+function exportIntervention() {
+    // Exporter en PDF
+    window.open(`/interventions/{{ intervention.id }}/export-pdf/`, '_blank');
+}
+
+// Initialisation du tri des opérations
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser le drag & drop pour les opérations
+    const operationsContainer = document.getElementById('operations-container');
+    if (operationsContainer) {
+        new Sortable(operationsContainer, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            handle: '.drag-handle',
+            draggable: '.operation-card', // Spécifier explicitement les éléments draggables
+            onEnd: function(evt) {
+                updateOperationsOrder();
+            }
+        });
+    }
+    
+    initializePointsDragDrop();
+
+});
+
+function updateOperationsOrder() {
+    // Cibler les éléments avec la classe operation-card
+    const operationsContainer = document.getElementById('operations-container');
+    const operationElements = operationsContainer.querySelectorAll('.operation-card[data-operation-id]');
+    const operationIds = Array.from(operationElements).map(el => el.dataset.operationId);
+    
+    console.log('Container trouvé:', operationsContainer); // Debug
+    console.log('Opérations trouvées:', operationElements.length); // Debug
+    console.log('IDs à envoyer:', operationIds); // Debug
+    
+    // Vérifier qu'on a des IDs
+    if (operationIds.length === 0) {
+        console.error('Aucune opération trouvée');
+        return;
+    }
+    
+    // Envoyer la requête
+    fetch('{% url "ajax_reorder_operations" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'operation_ids=' + operationIds.join(',')
+    })
+    .then(response => {
+        console.log('Status:', response.status); // Debug
+        return response.json();
+    })
+    .then(data => {
+        console.log('Réponse serveur:', data); // Debug
+        if (data.success) {
+            showToast('Ordre sauvegardé', 'success');
+            updateStepNumbers();
+        } else {
+            showToast('Erreur: ' + (data.error || 'Erreur inconnue'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur complète:', error);
+        showToast('Erreur de connexion', 'error');
+    });
+}
+// Fonction pour mettre à jour les numéros d'étape visuellement
+function updateStepNumbers() {
+    const operations = document.querySelectorAll('.operation-card[data-operation-id]');
+    operations.forEach((op, index) => {
+        // Chercher le span avec le numéro d'ordre
+        const orderSpan = op.querySelector('.rounded-full.bg-gmao-100');
+        if (orderSpan) {
+            orderSpan.textContent = index + 1;
+        }
+    });
+}
+// Fonction pour mettre à jour les numéros d'étape
+function updateStepNumbers() {
+    const operations = document.querySelectorAll('[data-operation-id]');
+    operations.forEach((op, index) => {
+        const stepNumber = op.querySelector('.step-number');
+        if (stepNumber) {
+            stepNumber.textContent = `Étape ${index + 1}`;
+        }
+    });
+}
+
+function initializePointsDragDrop() {
+    const pointsContainers = document.querySelectorAll('[id^="points-container-"]');
+    
+    pointsContainers.forEach(container => {
+        new Sortable(container, {
+            group: {
+                name: 'points',
+                pull: true,  // Permettre de sortir les éléments
+                put: true    // Permettre de recevoir des éléments
+            },
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            handle: '.drag-handle-point',
+            draggable: '.point-controle',
+            filter: 'button',  // Ne pas déplacer les boutons
+            
+            // Quand on commence à draguer
+            onStart: function(evt) {
+                // Ajouter une classe pour visualiser les zones de drop
+                document.querySelectorAll('[id^="points-container-"]').forEach(cont => {
+                    if (cont !== evt.from) {
+                        cont.classList.add('border-2', 'border-dashed', 'border-blue-400', 'bg-blue-50');
+                    }
+                });
+            },
+            
+            // Quand on termine le drag
+            onEnd: function(evt) {
+                // Retirer les classes de visualisation
+                document.querySelectorAll('[id^="points-container-"]').forEach(cont => {
+                    cont.classList.remove('border-2', 'border-dashed', 'border-blue-400', 'bg-blue-50');
+                });
+                
+                // Récupérer l'ID de l'opération cible
+                const targetOperationId = evt.to.id.replace('points-container-', '');
+                const sourceOperationId = evt.from.id.replace('points-container-', '');
+                
+                // Si on a changé d'opération
+                if (targetOperationId !== sourceOperationId) {
+                    console.log(`Point déplacé de l'opération ${sourceOperationId} vers ${targetOperationId}`);
+                }
+                
+                // Mettre à jour l'ordre
+                updatePointsOrder(targetOperationId);
+            }
+        });
+    });
+}
+
+function updatePointsOrder(operationId) {
+    const container = document.getElementById(`points-container-${operationId}`);
+    if (!container) {
+        console.error('Container non trouvé pour l\'opération', operationId);
+        return;
+    }
+    
+    // Récupérer tous les points dans ce container
+    const pointElements = container.querySelectorAll('.point-controle[data-point-id]');
+    const pointIds = Array.from(pointElements).map(el => el.dataset.pointId);
+    
+    console.log(`Mise à jour de l'ordre pour l'opération ${operationId}:`, pointIds);
+    
+    if (pointIds.length === 0) {
+        console.log('Aucun point à réorganiser');
+        return;
+    }
+    
+    // Envoyer la requête
+    fetch('{% url "reorder_points_controle" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            point_ids: pointIds,
+            operation_id: operationId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('✅ Points réorganisés avec succès');
+            // Optionnel : afficher une notification
+            if (typeof showToast === 'function') {
+                showToast('Points réorganisés', 'success');
+            }
+        } else {
+            console.error('❌ Erreur:', data.error);
+            alert('Erreur: ' + data.error);
+            // Recharger la page en cas d'erreur pour restaurer l'état
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erreur de connexion:', error);
+        alert('Erreur de connexion');
+        location.reload();
+    });
+}
+
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-md shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => notification.remove(), 3000);
+}
+
+// Fermer les modals en cliquant en dehors
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('fixed') && e.target.classList.contains('inset-0')) {
+        closeAddOperationModal();
+        closeAddPointModal();
+    }
+});
+</script>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ==========================================
+    // INITIALISATION DU DRAG & DROP
+    // ==========================================
+    
+    // Drag & Drop pour les opérations
+    const operationsContainer = document.getElementById('operations-container');
+    if (operationsContainer) {
+        new Sortable(operationsContainer, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            onEnd: function(evt) {
+                // Récupérer l'ordre des opérations
+                const operationIds = Array.from(operationsContainer.children).map(el => 
+                    el.getAttribute('data-operation-id')
+                );
+                
+                // Envoyer au serveur
+                fetch('{% url "ajax_reorder_operations" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        operation_ids: operationIds
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Ordre des opérations mis à jour', 'success');
+                        // Mettre à jour les numéros d'étape
+                        updateStepNumbers();
+                    } else {
+                        showToast('Erreur lors de la réorganisation', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    showToast('Erreur de connexion', 'error');
+                });
+            }
+        });
+    }
+    
+    // Drag & Drop pour les points de contrôle de chaque opération
+    document.querySelectorAll('.points-container').forEach(container => {
+        new Sortable(container, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onEnd: function(evt) {
+                const pointIds = Array.from(container.children).map(el => 
+                    el.getAttribute('data-point-id')
+                );
+                
+                fetch('{% url "reorder_points_controle" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        point_ids: pointIds
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Ordre des points mis à jour', 'success');
+                    }
+                });
+            }
+        });
+    });
+    
+    // ==========================================
+    // GESTION DES OPÉRATIONS COLLAPSIBLES
+    // ==========================================
+    
+    document.querySelectorAll('.collapse-operation').forEach(button => {
+        button.addEventListener('click', function() {
+            const operationId = this.getAttribute('data-operation-id');
+            const content = document.querySelector(`.operation-content[data-operation-id="${operationId}"]`);
+            const icon = this.querySelector('svg');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.classList.remove('rotate-180');
+            } else {
+                content.style.display = 'none';
+                icon.classList.add('rotate-180');
+            }
+        });
+    });
+    
+    // ==========================================
+    // GESTION DES MODALS ET FORMULAIRES
+    // ==========================================
+    
+    // Modal d'ajout d'opération
+    const addOperationBtn = document.getElementById('add-operation-btn');
+    const addOperationModal = document.getElementById('add-operation-modal');
+    
+    if (addOperationBtn && addOperationModal) {
+        addOperationBtn.addEventListener('click', function() {
+            addOperationModal.classList.remove('hidden');
+        });
+    }
+    
+    // Modal d'ajout de point de contrôle
+    document.querySelectorAll('.add-point-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const operationId = this.getAttribute('data-operation-id');
+            const modal = document.getElementById('add-point-modal');
+            const operationInput = modal.querySelector('[name="operation_id"]');
+            
+            operationInput.value = operationId;
+            modal.classList.remove('hidden');
+        });
+    });
+    
+    // Fermeture des modals
+    document.querySelectorAll('.modal-close, .modal-cancel').forEach(button => {
+        button.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        });
+    });
+    
+    // Fermeture des modals en cliquant sur le backdrop
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+        backdrop.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.closest('.modal').classList.add('hidden');
+            }
+        });
+    });
+    
+    // ==========================================
+    // ÉDITION INLINE DES OPÉRATIONS ET POINTS
+    // ==========================================
+    
+    // Édition des opérations
+    document.querySelectorAll('.edit-operation').forEach(button => {
+        button.addEventListener('click', function() {
+            const operationId = this.getAttribute('data-operation-id');
+            const operationCard = document.querySelector(`[data-operation-id="${operationId}"]`);
+            const titleElement = operationCard.querySelector('h3');
+            const currentName = titleElement.textContent.split(': ')[1];
+            
+            // Créer un input inline
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentName;
+            input.className = 'font-medium text-gray-900 bg-white border border-blue-300 rounded px-2 py-1';
+            
+            // Remplacer le titre par l'input
+            titleElement.innerHTML = `Étape ${titleElement.textContent.split(':')[0].split(' ')[1]}: `;
+            titleElement.appendChild(input);
+            input.focus();
+            input.select();
+            
+            // Fonction de sauvegarde
+            const saveEdit = () => {
+                const newName = input.value.trim();
+                if (newName && newName !== currentName) {
+                    // Envoyer au serveur
+                    fetch(`{% url 'ajax_edit_operation' 0 %}`.replace('0', operationId), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: `nom=${encodeURIComponent(newName)}`
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            titleElement.textContent = `Étape ${titleElement.textContent.split(':')[0].split(' ')[1]}: ${newName}`;
+                            showToast('Opération mise à jour', 'success');
+                        } else {
+                            titleElement.textContent = `Étape ${titleElement.textContent.split(':')[0].split(' ')[1]}: ${currentName}`;
+                            showToast('Erreur lors de la mise à jour', 'error');
+                        }
+                    });
+                } else {
+                    titleElement.textContent = `Étape ${titleElement.textContent.split(':')[0].split(' ')[1]}: ${currentName}`;
+                }
+            };
+            
+            // Événements
+            input.addEventListener('blur', saveEdit);
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    saveEdit();
+                }
+                if (e.key === 'Escape') {
+                    titleElement.textContent = `Étape ${titleElement.textContent.split(':')[0].split(' ')[1]}: ${currentName}`;
+                }
+            });
+        });
+    });
+    
+    // Suppression des opérations
+    document.querySelectorAll('.delete-operation').forEach(button => {
+        button.addEventListener('click', function() {
+            const operationId = this.getAttribute('data-operation-id');
+            const operationCard = document.querySelector(`[data-operation-id="${operationId}"]`);
+            const operationName = operationCard.querySelector('h3').textContent;
+            
+            if (confirm(`Êtes-vous sûr de vouloir supprimer l'opération "${operationName}" ?\n\nTous les points de contrôle associés seront également supprimés.`)) {
+                fetch(`{% url 'supprimer_operation' 0 %}`.replace('0', operationId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        operationCard.remove();
+                        updateStepNumbers();
+                        showToast('Opération supprimée', 'success');
+                    } else {
+                        showToast('Erreur lors de la suppression', 'error');
+                    }
+                });
+            }
+        });
+    });
+    
+    // Suppression des points de contrôle
+    document.querySelectorAll('.delete-point').forEach(button => {
+        button.addEventListener('click', function() {
+            const pointId = this.getAttribute('data-point-id');
+            const pointCard = document.querySelector(`[data-point-id="${pointId}"]`);
+            const pointName = pointCard.querySelector('h5').textContent;
+            
+            if (confirm(`Êtes-vous sûr de vouloir supprimer le point de contrôle "${pointName}" ?`)) {
+                fetch(`{% url 'supprimer_point_de_controle_ajax' 0 %}`.replace('0', pointId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest',  // 👈 Important pour que Django voie que c'est une requête AJAX
+                        'Content-Type': 'application/json'     // 👈 Important si tu envoies des données JSON
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        pointCard.remove();
+                        showToast('Point de contrôle supprimé', 'success');
+                    } else {
+                        showToast('Erreur lors de la suppression', 'error');
+                    }
+                });
+            }
+        });
+    });
+    
+    // ==========================================
+    // SAUVEGARDE DE L'INTERVENTION
+    // ==========================================
+    
+    const saveBtn = document.getElementById('save-intervention-btn');
+    const interventionForm = document.getElementById('intervention-form');
+    
+    if (saveBtn && interventionForm) {
+        saveBtn.addEventListener('click', function() {
+            const formData = new FormData(interventionForm);
+            formData.append('action', 'update_intervention');
+            
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    showToast('Intervention sauvegardée', 'success');
+                } else {
+                    showToast('Erreur lors de la sauvegarde', 'error');
+                }
+            });
+        });
+    }
+    
+    // ==========================================
+    // VALIDATION DE L'INTERVENTION
+    // ==========================================
+    
+    const validateBtn = document.getElementById('validate-intervention-btn');
+    if (validateBtn) {
+        validateBtn.addEventListener('click', function() {
+            const operationsCount = document.querySelectorAll('.operation-card').length;
+            const pointsCount = document.querySelectorAll('.point-card').length;
+            
+            if (operationsCount === 0) {
+                showToast('Ajoutez au moins une opération avant de valider', 'warning');
+                return;
+            }
+            
+            if (pointsCount === 0) {
+                showToast('Ajoutez au moins un point de contrôle avant de valider', 'warning');
+                return;
+            }
+            
+            if (confirm('Êtes-vous sûr de vouloir valider cette intervention ?\n\nUne fois validée, elle pourra être utilisée pour créer des ordres de travail.')) {
+                const formData = new FormData();
+                formData.append('action', 'validate_intervention');
+                formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        showToast('Erreur lors de la validation', 'error');
+                    }
+                });
+            }
+        });
+    }
+    
+    // ==========================================
+    // FONCTIONS UTILITAIRES
+    // ==========================================
+    
+    function updateStepNumbers() {
+        document.querySelectorAll('.operation-card').forEach((card, index) => {
+            const title = card.querySelector('h3');
+            const currentText = title.textContent;
+            const newText = currentText.replace(/Étape \d+:/, `Étape ${index + 1}:`);
+            title.textContent = newText;
+        });
+    }
+    
+    function showToast(message, type = 'info') {
+        // Créer le toast
+        const toast = document.createElement('div');
+        const bgColor = {
+            'success': 'bg-green-500',
+            'error': 'bg-red-500',
+            'warning': 'bg-yellow-500',
+            'info': 'bg-blue-500'
+        }[type] || 'bg-blue-500';
+        
+        toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
+        toast.innerHTML = `
+            <div class="flex items-center">
+                <span>${message}</span>
+                <button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Animation d'entrée
+        setTimeout(() => {
+            toast.classList.remove('translate-x-full');
+        }, 100);
+        
+        // Suppression automatique
+        setTimeout(() => {
+            toast.classList.add('translate-x-full');
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 300);
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

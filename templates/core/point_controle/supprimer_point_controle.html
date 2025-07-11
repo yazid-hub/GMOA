@@ -1,0 +1,174 @@
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+   <div class="bg-white shadow-sm rounded-lg">
+       <!-- En-tête -->
+       <div class="px-6 py-4 border-b border-gray-200">
+           <div class="flex items-center">
+               <div class="flex-shrink-0">
+                   <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"></path>
+                   </svg>
+               </div>
+               <div class="ml-4">
+                   <h1 class="text-xl font-bold text-gray-900">Confirmer la suppression</h1>
+                   <p class="text-sm text-gray-600">Cette action est irréversible</p>
+               </div>
+           </div>
+       </div>
+
+       <!-- Contenu -->
+       <div class="px-6 py-4">
+           <div class="mb-6">
+               <h2 class="text-lg font-medium text-gray-900 mb-2">
+                   Êtes-vous sûr de vouloir supprimer le point de contrôle suivant ?
+               </h2>
+               
+               <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                   <div class="flex items-start">
+                       <div class="flex-shrink-0">
+                           <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                           </svg>
+                       </div>
+                       <div class="ml-3">
+                           <h3 class="text-lg font-medium text-gray-900">{{ point.label }}</h3>
+                           <p class="text-sm text-gray-600">
+                               Opération : "{{ operation.nom }}" (Étape {{ operation.ordre }})
+                           </p>
+                           <p class="text-sm text-gray-500 mt-1">
+                               Type : {{ point.get_type_champ_display }}
+                               {% if point.est_obligatoire %}
+                                   • <span class="text-red-600 font-medium">Obligatoire</span>
+                               {% endif %}
+                           </p>
+                           {% if point.aide %}
+                               <p class="text-sm text-gray-500 mt-1 italic">{{ point.aide }}</p>
+                           {% endif %}
+                       </div>
+                   </div>
+               </div>
+           </div>
+
+           <!-- Avertissements -->
+           <div class="mb-6">
+               <div class="bg-red-50 border-l-4 border-red-400 p-4">
+                   <div class="flex">
+                       <div class="flex-shrink-0">
+                           <svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                               <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                           </svg>
+                       </div>
+                       <div class="ml-3">
+                           <h3 class="text-sm font-medium text-red-800">Attention !</h3>
+                           <div class="mt-2 text-sm text-red-700">
+                               <ul class="list-disc list-inside space-y-1">
+                                   <li>Ce point de contrôle sera définitivement supprimé</li>
+                                   <li>L'ordre des points de contrôle restants sera automatiquement réorganisé</li>
+                                   {% if reponses_existantes %}
+                                       <li class="font-medium text-red-800">
+                                           ⚠️ {{ nb_reponses }} réponse(s) associée(s) seront également supprimées
+                                       </li>
+                                   {% endif %}
+                               </ul>
+                           </div>
+                       </div>
+                   </div>
+               </div>
+           </div>
+
+           {% if reponses_existantes %}
+               <div class="mb-6">
+                   <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                       <div class="flex">
+                           <div class="flex-shrink-0">
+                               <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                   <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                               </svg>
+                           </div>
+                           <div class="ml-3">
+                               <h3 class="text-sm font-medium text-yellow-800">Données existantes</h3>
+                               <p class="mt-1 text-sm text-yellow-700">
+                                   Ce point de contrôle a déjà <strong>{{ nb_reponses }}</strong> réponse(s) saisie(s) 
+                                   dans des rapports d'exécution. Ces données seront perdues si vous continuez.
+                               </p>
+                           </div>
+                       </div>
+                   </div>
+               </div>
+           {% endif %}
+
+           <!-- Caractéristiques du point -->
+           <div class="mb-6">
+               <h3 class="text-sm font-medium text-gray-900 mb-3">Caractéristiques du point de contrôle :</h3>
+               <div class="bg-gray-50 rounded-md p-3">
+                   <dl class="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                       <div>
+                           <dt class="text-sm font-medium text-gray-500">Type de champ</dt>
+                           <dd class="text-sm text-gray-900">{{ point.get_type_champ_display }}</dd>
+                       </div>
+                       <div>
+                           <dt class="text-sm font-medium text-gray-500">Obligatoire</dt>
+                           <dd class="text-sm text-gray-900">
+                               {% if point.est_obligatoire %}
+                                   <span class="text-red-600">Oui</span>
+                               {% else %}
+                                   <span class="text-green-600">Non</span>
+                               {% endif %}
+                           </dd>
+                       </div>
+                       {% if point.options %}
+                           <div class="sm:col-span-2">
+                               <dt class="text-sm font-medium text-gray-500">Options disponibles</dt>
+                               <dd class="text-sm text-gray-900">{{ point.options }}</dd>
+                           </div>
+                       {% endif %}
+                       <div>
+                           <dt class="text-sm font-medium text-gray-500">Médias autorisés</dt>
+                           <dd class="text-sm text-gray-900">
+                               {% if point.permettre_photo or point.permettre_audio or point.permettre_video %}
+                                   {% if point.permettre_photo %}📸 Photo{% endif %}
+                                   {% if point.permettre_audio %}🎙️ Audio{% endif %}
+                                   {% if point.permettre_video %}🎬 Vidéo{% endif %}
+                               {% else %}
+                                   Aucun
+                               {% endif %}
+                           </dd>
+                       </div>
+                       {% if point.peut_demander_reparation %}
+                           <div>
+                               <dt class="text-sm font-medium text-gray-500">Demande de réparation</dt>
+                               <dd class="text-sm text-orange-600 font-medium">Autorisée</dd>
+                           </div>
+                       {% endif %}
+                   </dl>
+               </div>
+           </div>
+       </div>
+
+       <!-- Actions -->
+       <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row sm:justify-end gap-3">
+           <a href="{% url 'intervention_builder' intervention.pk %}" 
+              class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+               </svg>
+               Annuler
+           </a>
+           
+           <form method="post" class="inline">
+               {% csrf_token %}
+               <input type="hidden" name="confirmer_suppression" value="oui">
+               <button type="submit" 
+                       class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                       onclick="return confirm('Êtes-vous absolument certain de vouloir supprimer ce point de contrôle ?')">
+                   <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                   </svg>
+                   Supprimer définitivement
+               </button>
+           </form>
+       </div>
+   </div>
+</div>
+{% endblock %}

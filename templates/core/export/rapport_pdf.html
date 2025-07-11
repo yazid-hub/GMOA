@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+{% load custom_filters %}
+
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Rapport Intervention - {{ ordre_de_travail.titre }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Tailwind CDN (pour rendu PDF local ou via navigateur) -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* For print adjustments */
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body class="bg-white text-gray-900 font-sans p-8">
+
+    <header class="mb-8 border-b border-gray-300 pb-4">
+        <h1 class="text-3xl font-bold flex items-center">
+            <svg class="w-8 h-8 mr-3 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"/></svg>
+            Rapport d'intervention : {{ ordre_de_travail.titre }}
+        </h1>
+        <div class="mt-2 text-sm text-gray-600 flex space-x-6">
+            <div class="flex items-center space-x-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"/></svg>
+                <span>Asset : <span class="font-medium">{{ ordre_de_travail.asset.nom }}</span></span>
+            </div>
+            <div class="flex items-center space-x-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h11M9 21V3"/></svg>
+                <span>Intervention : <span class="font-medium">{{ ordre_de_travail.intervention.nom }}</span></span>
+            </div>
+            <div class="flex items-center space-x-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="none"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/></svg>
+                <span>Durée estimée : <span class="font-medium">{{ ordre_de_travail.intervention.duree_estimee_heures }}h</span></span>
+            </div>
+        </div>
+        <div class="mt-2 text-blue-700 font-semibold">
+            Statut : {{ rapport.get_statut_rapport_display }}
+            {% if rapport.date_execution_debut %}
+            | Débutée le {{ rapport.date_execution_debut|date:"d/m/Y à H:i" }}
+            {% endif %}
+        </div>
+    </header>
+
+    <main>
+        {% for operation in operations %}
+        <section class="mb-8">
+            <h2 class="bg-blue-100 text-blue-800 font-semibold px-4 py-2 rounded-l border-l-4 border-blue-600 mb-4">
+                Opération {{ operation.ordre }} : {{ operation.nom }}
+            </h2>
+
+            {% if operation.points_de_controle.all %}
+                <div class="space-y-6">
+                    {% for point in operation.points_de_controle.all %}
+                    <div class="pl-4 border-l-4 border-gray-300">
+                        <p class="font-semibold">
+                            {{ point.label }}
+                            {% if point.est_obligatoire %}
+                            <span class="text-red-600">*</span>
+                            {% endif %}
+                        </p>
+                        {% if point.aide %}
+                        <p class="text-sm text-gray-600 italic mb-2">{{ point.aide }}</p>
+                        {% endif %}
+                        <p class="bg-gray-100 rounded p-2 break-words">
+                            {{ reponses_existantes|get_item:point.id|default:"(Aucune réponse)" }}
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+            <p class="text-gray-500 italic">Aucun point de contrôle défini pour cette opération.</p>
+            {% endif %}
+        </section>
+        {% empty %}
+        <p class="text-gray-500 italic">Cette intervention n'a pas encore d'opérations définies.</p>
+        {% endfor %}
+    </main>
+
+    <footer class="mt-12 text-xs text-gray-500 text-center">
+        Généré le {{ now|date:"d/m/Y H:i" }} par GMOA
+    </footer>
+
+</body>
+</html>

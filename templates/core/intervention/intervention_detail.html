@@ -1,0 +1,39 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Intervention - {{ intervention.nom }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <div class="bg-white shadow rounded-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-900">{{ intervention.nom }}</h1>
+        <p class="text-gray-600 mt-2">{{ intervention.description }}</p>
+        
+        <div class="mt-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Opérations</h3>
+            {% for operation in operations %}
+            <div class="border border-gray-200 rounded-lg p-4 mb-4">
+                <h4 class="font-medium text-gray-900">{{ operation.ordre }}. {{ operation.nom }}</h4>
+                
+                {% if operation.points_de_controle.all %}
+                <div class="mt-3 space-y-2">
+                    {% for point in operation.points_de_controle.all %}
+                    <div class="text-sm text-gray-600 pl-4">
+                        • {{ point.label }}{% if point.est_obligatoire %} <span class="text-red-500">*</span>{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p class="text-gray-500">Aucune opération définie pour cette intervention.</p>
+            {% endfor %}
+        </div>
+        
+        <div class="mt-6 flex space-x-4">
+            <a href="{% url 'liste_interventions' %}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">
+                Retour à la liste
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

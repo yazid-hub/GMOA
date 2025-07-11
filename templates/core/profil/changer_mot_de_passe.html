@@ -1,0 +1,212 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Changer le mot de passe - GMAO App{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <!-- En-tête -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class="text-center">
+            <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-yellow-100 mb-4">
+                <i class="fas fa-key text-yellow-600 text-xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-900">Changer le mot de passe</h1>
+            <p class="text-gray-600 mt-2">Saisissez votre ancien mot de passe et choisissez-en un nouveau</p>
+        </div>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Ancien mot de passe -->
+            <div>
+                <label for="{{ form.old_password.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.old_password.label }}
+                    <span class="text-red-500">*</span>
+                </label>
+                {{ form.old_password }}
+                {% if form.old_password.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.old_password.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Nouveau mot de passe -->
+            <div>
+                <label for="{{ form.new_password1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.new_password1.label }}
+                    <span class="text-red-500">*</span>
+                </label>
+                {{ form.new_password1 }}
+                {% if form.new_password1.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.new_password1.errors.0 }}</p>
+                {% endif %}
+                {% if form.new_password1.help_text %}
+                <div class="mt-2 text-xs text-gray-500 bg-gray-50 p-3 rounded-md">
+                    <h4 class="font-medium mb-1">Critères du mot de passe :</h4>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li>Au moins 8 caractères</li>
+                        <li>Ne doit pas être trop similaire à vos autres informations personnelles</li>
+                        <li>Ne doit pas être un mot de passe couramment utilisé</li>
+                        <li>Ne doit pas être entièrement numérique</li>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Confirmation nouveau mot de passe -->
+            <div>
+                <label for="{{ form.new_password2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.new_password2.label }}
+                    <span class="text-red-500">*</span>
+                </label>
+                {{ form.new_password2 }}
+                {% if form.new_password2.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.new_password2.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Erreurs générales -->
+            {% if form.non_field_errors %}
+            <div class="bg-red-50 border border-red-200 rounded-md p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-circle text-red-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Erreurs de validation</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Conseils de sécurité -->
+            <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle text-blue-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-blue-800">Conseils de sécurité</h3>
+                        <div class="mt-2 text-sm text-blue-700">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Utilisez un mot de passe unique pour ce compte</li>
+                                <li>Mélangez majuscules, minuscules, chiffres et symboles</li>
+                                <li>Ne partagez jamais votre mot de passe</li>
+                                <li>Changez-le régulièrement</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Boutons d'action -->
+            <div class="flex justify-between space-x-4">
+                <a href="{% url 'profil_utilisateur' %}" 
+                   class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium py-3 px-4 rounded-md text-center transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Retour au profil
+                </a>
+                <button type="submit" 
+                        class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-md transition-colors">
+                    <i class="fas fa-check mr-2"></i>
+                    Changer le mot de passe
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Informations supplémentaires -->
+    <div class="mt-6 bg-gray-50 rounded-lg p-4">
+        <h3 class="text-sm font-medium text-gray-900 mb-2">
+            <i class="fas fa-question-circle mr-2"></i>
+            Mot de passe oublié ?
+        </h3>
+        <p class="text-sm text-gray-600">
+            Si vous avez oublié votre mot de passe actuel, contactez votre administrateur système 
+            à l'adresse <a href="mailto:admin@gmao.local" class="text-gmao-600 hover:text-gmao-700">admin@gmao.local</a>
+        </p>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const newPassword1 = document.getElementById('{{ form.new_password1.id_for_label }}');
+    const newPassword2 = document.getElementById('{{ form.new_password2.id_for_label }}');
+    
+    // Indicateur de force du mot de passe
+    if (newPassword1) {
+        const strengthIndicator = document.createElement('div');
+        strengthIndicator.className = 'mt-2 text-xs';
+        newPassword1.parentNode.appendChild(strengthIndicator);
+        
+        newPassword1.addEventListener('input', function() {
+            const password = this.value;
+            let strength = 0;
+            let strengthText = '';
+            let strengthColor = '';
+            
+            if (password.length >= 8) strength++;
+            if (/[a-z]/.test(password)) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^A-Za-z0-9]/.test(password)) strength++;
+            
+            switch (strength) {
+                case 0:
+                case 1:
+                    strengthText = 'Très faible';
+                    strengthColor = 'text-red-600';
+                    break;
+                case 2:
+                    strengthText = 'Faible';
+                    strengthColor = 'text-orange-600';
+                    break;
+                case 3:
+                    strengthText = 'Moyen';
+                    strengthColor = 'text-yellow-600';
+                    break;
+                case 4:
+                    strengthText = 'Fort';
+                    strengthColor = 'text-green-600';
+                    break;
+                case 5:
+                    strengthText = 'Très fort';
+                    strengthColor = 'text-green-700';
+                    break;
+            }
+            
+            strengthIndicator.innerHTML = password.length > 0 ? 
+                `<span class="${strengthColor}">Force du mot de passe: ${strengthText}</span>` : '';
+        });
+    }
+    
+    // Vérification de la correspondance des mots de passe
+    if (newPassword2) {
+        newPassword2.addEventListener('input', function() {
+            const match = this.value === newPassword1.value;
+            const existingFeedback = this.parentNode.querySelector('.password-match-feedback');
+            
+            if (existingFeedback) {
+                existingFeedback.remove();
+            }
+            
+            if (this.value.length > 0) {
+                const feedback = document.createElement('div');
+                feedback.className = `mt-1 text-xs password-match-feedback ${match ? 'text-green-600' : 'text-red-600'}`;
+                feedback.innerHTML = match ? 
+                    '<i class="fas fa-check mr-1"></i>Les mots de passe correspondent' : 
+                    '<i class="fas fa-times mr-1"></i>Les mots de passe ne correspondent pas';
+                this.parentNode.appendChild(feedback);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

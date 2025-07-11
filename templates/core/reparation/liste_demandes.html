@@ -1,0 +1,476 @@
+<!-- core/templates/core/reparation/liste_demandes.html -->
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Demandes de Réparation - GMAO{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- En-tête avec filtres -->
+    <div class="bg-white shadow-sm rounded-lg mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Demandes de Réparation</h1>
+                    <p class="text-sm text-gray-600 mt-1">
+                        Gestion des demandes de réparation issues des interventions
+                    </p>
+                </div>
+                
+                <!-- Filtres rapides -->
+                <div class="flex flex-wrap gap-2">
+                    <a href="?statut=EN_ATTENTE" 
+                       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                              {% if current_filters.statut == 'EN_ATTENTE' %}bg-yellow-100 text-yellow-800{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                        En attente
+                    </a>
+                    <a href="?statut=VALIDEE" 
+                       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                              {% if current_filters.statut == 'VALIDEE' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                        Validées
+                    </a>
+                    <a href="?statut=EN_COURS" 
+                       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                              {% if current_filters.statut == 'EN_COURS' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                        En cours
+                    </a>
+                    <a href="?priorite=4" 
+                       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                              {% if current_filters.priorite == '4' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                        Urgentes
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Formulaire de recherche -->
+        <div class="px-6 py-4">
+            <form method="get" class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-1">
+                    <input type="text" name="search" value="{{ current_filters.search|default:'' }}" 
+                           placeholder="Rechercher par numéro, titre ou description..."
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="flex flex-wrap gap-2">
+                    <select name="statut" class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Tous les statuts</option>
+                        {% for value, label in statuts_choix %}
+                            <option value="{{ value }}" {% if current_filters.statut == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    
+                    <select name="priorite" class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Toutes les priorités</option>
+                        {% for value, label in priorites_choix %}
+                            <option value="{{ value }}" {% if current_filters.priorite == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    
+                    <button type="submit" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        Rechercher
+                    </button>
+                    
+                    {% if current_filters.search or current_filters.statut or current_filters.priorite %}
+                        <a href="{% url 'liste_demandes_reparation' %}" 
+                           class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            Effacer
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">En attente</p>
+                    <p class="text-2xl font-semibold text-gray-900">
+                        {{ demandes_page.object_list|length|default:0 }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Validées</p>
+                    <p class="text-2xl font-semibold text-gray-900">0</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">En cours</p>
+                    <p class="text-2xl font-semibold text-gray-900">0</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Urgentes</p>
+                    <p class="text-2xl font-semibold text-gray-900">0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des demandes -->
+    <div class="bg-white shadow-sm rounded-lg">
+        {% if demandes_page.object_list %}
+            <div class="overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Demande
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Ordre de Travail
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Priorité
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Statut
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Assigné à
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Date création
+                            </th>
+                            <th class="relative px-6 py-3">
+                                <span class="sr-only">Actions</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for demande in demandes_page.object_list %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div>
+                                            <div class="text-sm font-medium text-gray-900">
+                                                <a href="{% url 'detail_demande_reparation' demande.pk %}" 
+                                                   class="text-blue-600 hover:text-blue-800">
+                                                    {{ demande.numero_demande }}
+                                                </a>
+                                            </div>
+                                            <div class="text-sm text-gray-500 max-w-xs truncate">
+                                                {{ demande.titre }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">
+                                        <a href="{% url 'detail_ordre_travail' demande.ordre_de_travail.pk %}" 
+                                           class="text-blue-600 hover:text-blue-800">
+                                            OT-{{ demande.ordre_de_travail.id }}
+                                        </a>
+                                    </div>
+                                    <div class="text-sm text-gray-500">
+                                        {{ demande.ordre_de_travail.asset.nom }}
+                                    </div>
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {% if demande.priorite == 4 %}bg-red-100 text-red-800
+                                        {% elif demande.priorite == 3 %}bg-orange-100 text-orange-800
+                                        {% elif demande.priorite == 2 %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ demande.get_priorite_display }}
+                                    </span>
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {% if demande.statut == 'EN_ATTENTE' %}bg-yellow-100 text-yellow-800
+                                        {% elif demande.statut == 'VALIDEE' %}bg-blue-100 text-blue-800
+                                        {% elif demande.statut == 'EN_COURS' %}bg-green-100 text-green-800
+                                        {% elif demande.statut == 'TERMINEE' %}bg-gray-100 text-gray-800
+                                        {% elif demande.statut == 'REJETEE' %}bg-red-100 text-red-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ demande.get_statut_display }}
+                                    </span>
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {% if demande.assignee_a %}
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-8 w-8">
+                                                <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                                    <span class="text-sm font-medium text-blue-800">
+                                                        {{ demande.assignee_a.first_name|first|default:demande.assignee_a.username|first }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-3">
+                                                <div class="text-sm font-medium text-gray-900">
+                                                    {{ demande.assignee_a.get_full_name|default:demande.assignee_a.username }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-gray-400 italic">Non assigné</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <div>{{ demande.date_creation|date:"d/m/Y" }}</div>
+                                    <div>{{ demande.date_creation|time:"H:i" }}</div>
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <div class="flex items-center space-x-2">
+                                        <a href="{% url 'detail_demande_reparation' demande.pk %}" 
+                                           class="text-blue-600 hover:text-blue-900 bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded">
+                                            Voir
+                                        </a>
+                                        
+                                        {% if user_role in 'MANAGER,ADMIN' and demande.statut == 'EN_ATTENTE' %}
+                                            <button type="button" 
+                                                    onclick="validateDemande({{ demande.pk }})"
+                                                    class="text-green-600 hover:text-green-900 bg-green-100 hover:bg-green-200 px-2 py-1 rounded text-xs">
+                                                Valider
+                                            </button>
+                                        {% endif %}
+                                        
+                                        {% if demande.est_en_retard %}
+                                            <span class="inline-flex items-center text-red-600">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if demandes_page.has_other_pages %}
+                <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 flex justify-between sm:hidden">
+                            {% if demandes_page.has_previous %}
+                                <a href="?page={{ demandes_page.previous_page_number }}" 
+                                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Précédent
+                                </a>
+                            {% endif %}
+                            {% if demandes_page.has_next %}
+                                <a href="?page={{ demandes_page.next_page_number }}" 
+                                   class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Suivant
+                                </a>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm text-gray-700">
+                                    Affichage de 
+                                    <span class="font-medium">{{ demandes_page.start_index }}</span>
+                                    à 
+                                    <span class="font-medium">{{ demandes_page.end_index }}</span>
+                                    sur 
+                                    <span class="font-medium">{{ demandes_page.paginator.count }}</span>
+                                    résultats
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                    {% if demandes_page.has_previous %}
+                                        <a href="?page={{ demandes_page.previous_page_number }}" 
+                                           class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                        </a>
+                                    {% endif %}
+                                    
+                                    {% for page_num in demandes_page.paginator.page_range %}
+                                        {% if page_num == demandes_page.number %}
+                                            <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
+                                                {{ page_num }}
+                                            </span>
+                                        {% else %}
+                                            <a href="?page={{ page_num }}" 
+                                               class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                                {{ page_num }}
+                                            </a>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if demandes_page.has_next %}
+                                        <a href="?page={{ demandes_page.next_page_number }}" 
+                                           class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                        </a>
+                                    {% endif %}
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% else %}
+            <!-- État vide -->
+            <div class="text-center py-12">
+                <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune demande de réparation</h3>
+                {% if current_filters.search or current_filters.statut or current_filters.priorite %}
+                    <p class="text-gray-500 mb-4">Aucune demande ne correspond à vos critères de recherche.</p>
+                    <a href="{% url 'liste_demandes_reparation' %}" 
+                       class="text-blue-600 hover:text-blue-800 font-medium">
+                        Effacer les filtres
+                    </a>
+                {% else %}
+                    <p class="text-gray-500 mb-4">Les demandes de réparation apparaîtront ici lorsque les techniciens en créeront lors des interventions.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de validation rapide -->
+<div id="validate-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Valider la demande</h3>
+            </div>
+            
+            <form id="validate-form" method="post">
+                {% csrf_token %}
+                <input type="hidden" id="demande-id" name="demande_id">
+                <input type="hidden" name="action" value="valider">
+                
+                <div class="px-6 py-4">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Commentaire du manager (optionnel)
+                        </label>
+                        <textarea name="commentaire_manager" rows="3" 
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="Précisions sur la validation..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
+                    <button type="button" onclick="closeValidateModal()" 
+                            class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md">
+                        Annuler
+                    </button>
+                    <button type="submit" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md">
+                        Valider la demande
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function validateDemande(demandeId) {
+    document.getElementById('demande-id').value = demandeId;
+    document.getElementById('validate-modal').classList.remove('hidden');
+}
+
+function closeValidateModal() {
+    document.getElementById('validate-modal').classList.add('hidden');
+}
+
+document.getElementById('validate-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const demandeId = formData.get('demande_id');
+    
+    fetch(`/demandes-reparation/${demandeId}/`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Erreur lors de la validation');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur de connexion');
+    });
+});
+
+// Fermer le modal en cliquant à l'extérieur
+document.getElementById('validate-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeValidateModal();
+    }
+});
+</script>
+{% endblock %}

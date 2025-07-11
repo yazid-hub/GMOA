@@ -1,0 +1,286 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Mon Profil - GMAO App{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- En-tête du profil -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-gmao-500 to-gmao-600 px-6 py-8">
+            <div class="flex items-center">
+                <div class="h-20 w-20 rounded-full bg-white flex items-center justify-center shadow-lg">
+                    <span class="text-2xl font-bold text-gmao-600">
+                        {{ user.first_name.0|default:user.username.0|upper }}{{ user.last_name.0|upper }}
+                    </span>
+                </div>
+                <div class="ml-6 text-white">
+                    <h1 class="text-2xl font-bold">
+                        {{ user.get_full_name|default:user.username }}
+                    </h1>
+                    <p class="text-gmao-100">{{ profil.get_role_display }} - GMAO</p>
+                    <p class="text-gmao-100 text-sm">
+                        <i class="fas fa-envelope mr-2"></i>{{ user.email }}
+                    </p>
+                    {% if profil.telephone %}
+                    <p class="text-gmao-100 text-sm">
+                        <i class="fas fa-phone mr-2"></i>{{ profil.telephone }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions rapides -->
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <div class="flex space-x-4">
+                <a href="{% url 'changer_mot_de_passe' %}" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    <i class="fas fa-key mr-2"></i>
+                    Changer le mot de passe
+                </a>
+                <a href="{% url 'dashboard' %}" 
+                   class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gmao-600 hover:bg-gmao-700">
+                    <i class="fas fa-tachometer-alt mr-2"></i>
+                    Retour au tableau de bord
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire de modification du profil -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                <i class="fas fa-user-edit mr-2 text-gmao-600"></i>
+                Modifier mes informations
+            </h3>
+            <p class="text-sm text-gray-600 mt-1">Mettez à jour vos informations personnelles</p>
+        </div>
+        
+        <form method="post" class="px-6 py-6">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <!-- Informations utilisateur -->
+                <div class="sm:col-span-2">
+                    <h4 class="text-md font-medium text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-id-card mr-2 text-gray-500"></i>
+                        Informations personnelles
+                    </h4>
+                </div>
+                
+                <!-- Prénom -->
+                <div>
+                    <label for="{{ user_form.first_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ user_form.first_name.label }}
+                    </label>
+                    {{ user_form.first_name }}
+                    {% if user_form.first_name.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ user_form.first_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Nom -->
+                <div>
+                    <label for="{{ user_form.last_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ user_form.last_name.label }}
+                    </label>
+                    {{ user_form.last_name }}
+                    {% if user_form.last_name.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ user_form.last_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Email -->
+                <div class="sm:col-span-2">
+                    <label for="{{ user_form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ user_form.email.label }}
+                    </label>
+                    {{ user_form.email }}
+                    {% if user_form.email.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ user_form.email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Informations GMAO -->
+                <div class="sm:col-span-2 pt-6 border-t border-gray-200">
+                    <h4 class="text-md font-medium text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-cogs mr-2 text-gray-500"></i>
+                        Informations GMAO
+                    </h4>
+                </div>
+                
+                <!-- Téléphone -->
+                <div>
+                    <label for="{{ profil_form.telephone.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ profil_form.telephone.label }}
+                    </label>
+                    {{ profil_form.telephone }}
+                    {% if profil_form.telephone.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ profil_form.telephone.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Rôle (lecture seule) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Rôle dans le système
+                    </label>
+                    <div class="px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-700">
+                        {{ profil.get_role_display }}
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">
+                        Contactez votre administrateur pour modifier votre rôle
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Informations système (lecture seule) -->
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <h4 class="text-md font-medium text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-info-circle mr-2 text-gray-500"></i>
+                    Informations du compte
+                </h4>
+                
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Nom d'utilisateur</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.username }}</dd>
+                    </div>
+                    
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Membre depuis</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ user.date_joined|date:"d/m/Y" }}</dd>
+                    </div>
+                    
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Dernière connexion</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {% if user.last_login %}
+                                {{ user.last_login|date:"d/m/Y à H:i" }}
+                            {% else %}
+                                Jamais
+                            {% endif %}
+                        </dd>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Boutons d'action -->
+            <div class="mt-8 flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                <a href="{% url 'dashboard' %}" 
+                   class="bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium py-2 px-6 rounded-md transition-colors">
+                    Annuler
+                </a>
+                <button type="submit" 
+                        class="bg-gmao-600 hover:bg-gmao-700 text-white font-medium py-2 px-6 rounded-md transition-colors flex items-center">
+                    <i class="fas fa-save mr-2"></i>
+                    Sauvegarder les modifications
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Statistiques personnelles (optionnel) -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                <i class="fas fa-chart-bar mr-2 text-gmao-600"></i>
+                Mes statistiques
+            </h3>
+        </div>
+        
+        <div class="px-6 py-6">
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                <!-- Ordres assignés -->
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-gmao-600">
+                        {{ user.taches_assignees.count }}
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        Ordres de travail assignés
+                    </div>
+                </div>
+                
+                <!-- Ordres créés -->
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-600">
+                        {{ user.ordres_de_travail_crees.count }}
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        Ordres de travail créés
+                    </div>
+                </div>
+                
+                <!-- Rapports créés -->
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-600">
+                        {{ user.rapports_crees.count }}
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        Rapports d'exécution
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Équipes (si applicable) -->
+    {% if user.equipes.all %}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                <i class="fas fa-users mr-2 text-gmao-600"></i>
+                Mes équipes
+            </h3>
+        </div>
+        
+        <div class="px-6 py-6">
+            <div class="space-y-3">
+                {% for equipe in user.equipes.all %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                        <h4 class="font-medium text-gray-900">{{ equipe.nom }}</h4>
+                        {% if equipe.chef_equipe %}
+                        <p class="text-sm text-gray-500">
+                            Chef d'équipe: {{ equipe.chef_equipe.get_full_name|default:equipe.chef_equipe.username }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        {{ equipe.membres.count }} membre{{ equipe.membres.count|pluralize }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Confirmation avant abandon des modifications
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const initialData = new FormData(form);
+    let formChanged = false;
+    
+    // Détecter les changements dans le formulaire
+    form.addEventListener('input', function() {
+        formChanged = true;
+    });
+    
+    // Avertir avant de quitter si des modifications non sauvegardées
+    const cancelLink = document.querySelector('a[href="{% url 'dashboard' %}"]');
+    if (cancelLink) {
+        cancelLink.addEventListener('click', function(e) {
+            if (formChanged) {
+                if (!confirm('Vous avez des modifications non sauvegardées. Êtes-vous sûr de vouloir quitter ?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

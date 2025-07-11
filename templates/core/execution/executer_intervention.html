@@ -1,0 +1,542 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Exécution - {{ ordre_de_travail.intervention.nom }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header sticky -->
+    <header class="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-4">
+                    <button onclick="history.back()" 
+                            class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                            aria-label="Retour">
+                        <i class="fas fa-arrow-left text-lg"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-lg font-semibold text-gray-900 truncate max-w-md">
+                            {{ ordre_de_travail.intervention.nom }}
+                        </h1>
+                        <p class="text-sm text-gray-500">
+                            OT #{{ ordre_de_travail.id }} • {{ ordre_de_travail.asset.nom }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <!-- Statut connexion -->
+                    <div id="connection-status" class="flex items-center space-x-2 px-3 py-1 rounded-full bg-green-100 text-green-800">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-xs font-medium hidden sm:inline">En ligne</span>
+                    </div>
+                    
+                    <!-- Progress global -->
+                    <div class="flex items-center space-x-2">
+                        <span id="progress-text" class="text-xs font-medium text-gray-700 hidden sm:inline">0%</span>
+                        <div class="w-16 sm:w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div id="progress-bar" class="h-full bg-green-500 transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenu principal -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- Métadonnées pour JavaScript -->
+        <div id="intervention-meta-data" 
+             data-ordre-id="{{ ordre_de_travail.id }}"
+             data-csrf-token="{{ csrf_token }}"
+             data-auto-save-url="{% url 'save_draft_intervention' ordre_de_travail.id %}"
+             data-media-upload-url="{% url 'upload_media_ajax' %}"
+             class="hidden"></div>
+
+        {% if not operations %}
+        <!-- État vide -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+            <div class="max-w-md mx-auto">
+                <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Intervention non configurée</h3>
+                <p class="text-gray-600 mb-6">Cette intervention n'a pas encore d'opérations définies.</p>
+                <a href="{% url 'intervention_detail' ordre_de_travail.intervention.pk %}" 
+                   class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+                    <i class="fas fa-cog mr-2"></i>
+                    Configurer l'intervention
+                </a>
+            </div>
+        </div>
+        {% else %}
+
+        <!-- Formulaire d'exécution -->
+        <form id="execution-form" 
+              method="post" 
+              enctype="multipart/form-data"
+              class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Opérations -->
+            <div class="space-y-6">
+                {% for operation in operations %}
+                <div class="bg-white shadow rounded-lg overflow-hidden" id="operation-{{ operation.ordre }}">
+                    <!-- En-tête opération -->
+                    <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                        <button type="button" 
+                                class="w-full text-left flex items-center justify-between focus:outline-none"
+                                onclick="toggleCollapse('operation-{{ operation.id }}')">
+                            <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                                <span class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold mr-3">
+                                    {{ operation.ordre }}
+                                </span>
+                                {{ operation.nom }}
+                            </h3>
+                            <i class="fas fa-chevron-down transform transition-transform duration-200" id="chevron-operation-{{ operation.id }}"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Points de contrôle -->
+                    <div id="operation-{{ operation.id }}" class="p-6">
+                        {% if operation.points_de_controle.all %}
+                        <div class="space-y-6">
+                            {% for point in operation.points_de_controle.all %}
+                            <div class="border-l-4 border-blue-500 pl-4 py-2" data-point-id="{{ point.id }}">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <label class="block text-sm font-medium text-gray-900 mb-2">
+                                            {{ point.label }}
+                                            {% if point.est_obligatoire %}
+                                            <span class="text-red-500 ml-1">*</span>
+                                            {% endif %}
+                                        </label>
+                                        
+                                        {% if point.aide %}
+                                        <p class="text-gray-600 mb-3 text-sm">{{ point.aide }}</p>
+                                        {% endif %}
+                                        
+                                        <!-- Champs selon le type -->
+                                        {% if point.type_champ == 'TEXT' %}
+                                        <input type="text" 
+                                               name="reponse_{{ point.id }}" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                               value="{{ reponses_existantes|get_item:point.id|default:'' }}"
+                                               {% if point.est_obligatoire %}required{% endif %}>
+                                        
+                                        {% elif point.type_champ == 'TEXTAREA' %}
+                                        <textarea name="reponse_{{ point.id }}" 
+                                                  rows="3" 
+                                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                  {% if point.est_obligatoire %}required{% endif %}>{{ reponses_existantes|get_item:point.id|default:'' }}</textarea>
+                                        
+                                        {% elif point.type_champ == 'NUMBER' %}
+                                        <input type="number" 
+                                               name="reponse_{{ point.id }}" 
+                                               step="0.01"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                               value="{{ reponses_existantes|get_item:point.id|default:'' }}"
+                                               {% if point.est_obligatoire %}required{% endif %}>
+                                        
+                                        {% elif point.type_champ == 'SELECT' %}
+                                        <select name="reponse_{{ point.id }}" 
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                {% if point.est_obligatoire %}required{% endif %}>
+                                            <option value="">-- Sélectionnez --</option>
+                                            {% if point.options %}
+                                                {% for option in point.options|split:';' %}
+                                                <option value="{{ option|trim }}" 
+                                                        {% if reponses_existantes|get_item:point.id == option|trim %}selected{% endif %}>
+                                                    {{ option|trim }}
+                                                </option>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </select>
+                                        
+                                        {% elif point.type_champ == 'BOOLEAN' %}
+                                        <div class="flex space-x-4">
+                                            <label class="flex items-center">
+                                                <input type="radio" 
+                                                       name="reponse_{{ point.id }}" 
+                                                       value="OUI" 
+                                                       class="mr-2 text-blue-600"
+                                                       {% if reponses_existantes|get_item:point.id == 'OUI' %}checked{% endif %}
+                                                       {% if point.est_obligatoire %}required{% endif %}>
+                                                <span class="text-green-700 font-medium">OUI</span>
+                                            </label>
+                                            <label class="flex items-center">
+                                                <input type="radio" 
+                                                       name="reponse_{{ point.id }}" 
+                                                       value="NON" 
+                                                       class="mr-2 text-blue-600"
+                                                       {% if reponses_existantes|get_item:point.id == 'NON' %}checked{% endif %}
+                                                       {% if point.est_obligatoire %}required{% endif %}>
+                                                <span class="text-red-700 font-medium">NON</span>
+                                            </label>
+                                        </div>
+                                        
+                                        {% elif point.type_champ == 'DATE' %}
+                                        <input type="date" 
+                                               name="reponse_{{ point.id }}" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                               value="{{ reponses_existantes|get_item:point.id|default:'' }}"
+                                               {% if point.est_obligatoire %}required{% endif %}>
+                                        
+                                        {% elif point.type_champ == 'TIME' %}
+                                        <input type="time" 
+                                               name="reponse_{{ point.id }}" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                               value="{{ reponses_existantes|get_item:point.id|default:'' }}"
+                                               {% if point.est_obligatoire %}required{% endif %}>
+                                        
+                                        {% elif point.type_champ == 'DATETIME' %}
+                                        <input type="datetime-local" 
+                                               name="reponse_{{ point.id }}" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                               value="{{ reponses_existantes|get_item:point.id|default:'' }}"
+                                               {% if point.est_obligatoire %}required{% endif %}>
+                                        {% endif %}
+
+                                        <!-- Section médias -->
+                                        <div class="mt-4 border-t pt-4">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="text-sm font-medium text-gray-700">Médias</h4>
+                                                <div class="flex space-x-2">
+                                                    {% if point.permettre_photo %}
+                                                    <button type="button" 
+                                                            onclick="capturePhoto({{ point.id }})"
+                                                            class="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200">
+                                                        <i class="fas fa-camera mr-1"></i>Photo
+                                                    </button>
+                                                    {% endif %}
+                                                    
+                                                    {% if point.permettre_audio %}
+                                                    <button type="button" 
+                                                            id="audio-btn-{{ point.id }}"
+                                                            onclick="toggleAudioRecording({{ point.id }})"
+                                                            class="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200">
+                                                        <i class="fas fa-microphone mr-1"></i>Audio
+                                                    </button>
+                                                    {% endif %}
+                                                    
+                                                    {% if point.permettre_video %}
+                                                    <button type="button" 
+                                                            onclick="captureVideo({{ point.id }})"
+                                                            class="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200">
+                                                        <i class="fas fa-video mr-1"></i>Vidéo
+                                                    </button>
+                                                    {% endif %}
+                                                    
+                                                    {% if point.permettre_fichiers %}
+                                                    <button type="button" 
+                                                            onclick="document.getElementById('file-input-{{ point.id }}').click()"
+                                                            class="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200">
+                                                        <i class="fas fa-file mr-1"></i>Fichier
+                                                    </button>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+
+                                            <!-- Drop zone -->
+                                            <div id="drop-zone-{{ point.id }}" 
+                                                 class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                                                <i class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"></i>
+                                                <p class="text-sm text-gray-600">Glissez-déposez vos fichiers ici</p>
+                                                <p class="text-xs text-gray-500">JPG, PNG, PDF, Audio</p>
+                                            </div>
+
+                                            <!-- Médias existants -->
+                                            <div id="media-gallery-{{ point.id }}" class="mt-4 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                                                {% if medias_par_reponse|get_item:point.id %}
+                                                    {% for media in medias_par_reponse|get_item:point.id %}
+                                                    <div class="relative group" data-media-id="{{ media.id }}">
+                                                        {% if media.type_fichier == 'PHOTO' %}
+                                                        <div class="w-20 h-20 rounded-lg overflow-hidden border border-gray-200 cursor-pointer"
+                                                             onclick="viewMedia('{{ media.fichier.url }}', '{{ media.type_fichier }}', '{{ media.nom_original }}')">
+                                                            <img src="{{ media.fichier.url }}" alt="{{ media.nom_original }}" 
+                                                                 class="w-full h-full object-cover">
+                                                        </div>
+                                                        
+                                                        {% elif media.type_fichier == 'VIDEO' %}
+                                                        <div class="w-20 h-20 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center cursor-pointer"
+                                                             onclick="viewMedia('{{ media.fichier.url }}', '{{ media.type_fichier }}', '{{ media.nom_original }}')">
+                                                            <i class="fas fa-video text-2xl text-blue-500"></i>
+                                                        </div>
+                                                        
+                                                        {% elif media.type_fichier == 'AUDIO' %}
+                                                        <div class="w-20 h-20 rounded-lg bg-green-50 border border-green-200 flex flex-col items-center justify-center p-2 cursor-pointer"
+                                                             onclick="toggleAudioPlayer('audio-{{ media.id }}')">
+                                                            <i class="fas fa-music text-lg text-green-600 mb-1"></i>
+                                                            <span class="text-xs text-green-800 text-center">Audio</span>
+                                                            <audio id="audio-{{ media.id }}" class="hidden w-full mt-1" controls>
+                                                                <source src="{{ media.fichier.url }}" type="audio/mpeg">
+                                                            </audio>
+                                                        </div>
+                                                        
+                                                        {% else %}
+                                                        <div class="w-20 h-20 rounded-lg bg-gray-50 border border-gray-200 flex flex-col items-center justify-center p-2 cursor-pointer"
+                                                             onclick="window.open('{{ media.fichier.url }}', '_blank')">
+                                                            <i class="fas fa-file text-lg text-gray-500 mb-1"></i>
+                                                            <span class="text-xs text-gray-600 text-center">{{ media.nom_original|truncatechars:8 }}</span>
+                                                        </div>
+                                                        {% endif %}
+                                                        
+                                                        <!-- Bouton supprimer -->
+                                                        <button type="button" 
+                                                                class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                onclick="deleteMedia({{ media.id }}, {{ point.id }})"
+                                                                title="Supprimer">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                    {% endfor %}
+                                                {% endif %}
+                                            </div>
+
+                                            <!-- Input caché pour upload -->
+                                            <input type="file" 
+                                                   id="file-input-{{ point.id }}" 
+                                                   class="hidden" 
+                                                   multiple 
+                                                   accept="image/*,.pdf,.doc,.docx,audio/*"
+                                                   onchange="handleFileUpload(this, {{ point.id }})">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Indicateur de validation -->
+                                    <div class="ml-4">
+                                        <div id="validation-{{ point.id }}" class="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center">
+                                            <i class="fas fa-check text-white text-xs hidden"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-clipboard text-3xl mb-4"></i>
+                            <p>Aucun point de contrôle défini pour cette opération.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Barre d'actions flottante -->
+            <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30">
+                <div class="max-w-7xl mx-auto px-4 py-4">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-4 text-sm text-gray-600">
+                            <span>Statut : <span class="font-medium">{{ rapport.statut_rapport|default:'En cours' }}</span></span>
+                            <span id="completion-status">0 sur 0 complétés</span>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button type="submit" 
+                                    name="action" 
+                                    value="sauvegarder_reponses" 
+                                    class="px-4 py-2 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-lg">
+                                <i class="fas fa-save mr-2"></i>Sauvegarder
+                            </button>
+                            
+                            {% if rapport.statut_rapport == 'EN_COURS' %}
+                            <button type="button" 
+                                    onclick="validateAndConfirmFinalization()"
+                                    class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">
+                                <i class="fas fa-check-circle mr-2"></i>Finaliser
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Espacement pour la barre flottante -->
+            <div class="h-20"></div>
+        </form>
+        {% endif %}
+    </main>
+</div>
+
+<!-- Modal capture média -->
+<div id="media-capture-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black bg-opacity-50" onclick="closeMediaModal()"></div>
+        <div class="relative bg-white rounded-lg p-6 max-w-2xl w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" class="text-lg font-semibold">Capture</h3>
+                <button onclick="closeMediaModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div>
+                <video id="preview-video" class="w-full h-64 bg-black rounded" autoplay muted></video>
+                <canvas id="preview-canvas" class="hidden"></canvas>
+                <div class="mt-4 text-center">
+                    <button id="capture-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg">
+                        <i class="fas fa-camera mr-2"></i>Capturer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal visualisation média -->
+<div id="media-view-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black bg-opacity-75" onclick="closeViewModal()"></div>
+        <div class="relative bg-white rounded-lg p-6 max-w-4xl w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Visualisation</h3>
+                <button onclick="closeViewModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="view-content" class="text-center">
+                <!-- Contenu dynamique -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation -->
+<div id="confirm-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="relative bg-white rounded-lg p-6 max-w-md w-full">
+            <div class="flex items-center mb-4">
+                <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-exclamation-triangle text-yellow-600"></i>
+                </div>
+                <h3 class="text-lg font-semibold">Finaliser l'intervention</h3>
+            </div>
+            <p class="text-gray-600 mb-6">Êtes-vous sûr de vouloir finaliser cette intervention ? Cette action est irréversible.</p>
+            <div class="flex space-x-3">
+                <button onclick="closeConfirmModal()" class="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg">
+                    Annuler
+                </button>
+                <button onclick="confirmFinalization()" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg">
+                    Confirmer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts de base -->
+<script src="{% static 'js/intervention/intervention_ui.js' %}"></script>
+<script src="{% static 'js/intervention/intervention_forms.js' %}"></script>
+<script src="{% static 'js/intervention/media_manager.js' %}"></script>
+
+<script>
+// Fonctions de base pour le template
+function toggleCollapse(elementId) {
+    const element = document.getElementById(elementId);
+    const chevron = document.getElementById('chevron-' + elementId);
+    
+    if (element) {
+        const isHidden = element.style.display === 'none';
+        element.style.display = isHidden ? 'block' : 'none';
+        
+        if (chevron) {
+            chevron.classList.toggle('rotate-180');
+        }
+    }
+}
+
+function validateAndConfirmFinalization() {
+    // Vérification basique des champs obligatoires
+    const requiredFields = document.querySelectorAll('[required]');
+    let missingFields = [];
+    
+    requiredFields.forEach(field => {
+        if (!field.value || field.value.trim() === '') {
+            const label = field.closest('[data-point-id]')?.querySelector('label')?.textContent || 'Champ';
+            missingFields.push(label.replace('*', '').trim());
+        }
+    });
+    
+    if (missingFields.length > 0) {
+        alert('Champs obligatoires manquants: ' + missingFields.join(', '));
+        return;
+    }
+    
+    showConfirmModal();
+}
+
+function showConfirmModal() {
+    document.getElementById('confirm-modal').classList.remove('hidden');
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirm-modal').classList.add('hidden');
+}
+
+function confirmFinalization() {
+    const form = document.getElementById('execution-form');
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = 'finaliser_intervention';
+    form.appendChild(actionInput);
+    form.submit();
+}
+
+// Mise à jour de la progression
+function updateProgress() {
+    const totalFields = document.querySelectorAll('[data-point-id]').length;
+    let completedFields = 0;
+    
+    document.querySelectorAll('[data-point-id]').forEach(point => {
+        const inputs = point.querySelectorAll('input, select, textarea');
+        let hasValue = false;
+        
+        inputs.forEach(input => {
+            if (input.type === 'radio' && input.checked) hasValue = true;
+            else if (input.type !== 'radio' && input.value && input.value.trim() !== '') hasValue = true;
+        });
+        
+        const pointId = point.getAttribute('data-point-id');
+        const indicator = document.getElementById(`validation-${pointId}`);
+        
+        if (hasValue) {
+            completedFields++;
+            if (indicator) {
+                indicator.classList.remove('border-gray-300');
+                indicator.classList.add('border-green-500', 'bg-green-50');
+                indicator.querySelector('i').classList.remove('hidden');
+            }
+        } else {
+            if (indicator) {
+                indicator.classList.remove('border-green-500', 'bg-green-50');
+                indicator.classList.add('border-gray-300');
+                indicator.querySelector('i').classList.add('hidden');
+            }
+        }
+    });
+    
+    const percentage = totalFields > 0 ? (completedFields / totalFields) * 100 : 0;
+    
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const completionStatus = document.getElementById('completion-status');
+    
+    if (progressBar) progressBar.style.width = percentage + '%';
+    if (progressText) progressText.textContent = Math.round(percentage) + '%';
+    if (completionStatus) completionStatus.textContent = `${completedFields} sur ${totalFields} complétés`;
+}
+
+// Écouter les changements pour mettre à jour la progression
+document.addEventListener('input', updateProgress);
+document.addEventListener('change', updateProgress);
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(updateProgress, 100);
+});
+</script>
+
+{% endblock %}

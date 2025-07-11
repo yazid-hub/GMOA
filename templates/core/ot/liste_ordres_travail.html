@@ -1,0 +1,445 @@
+{% extends 'core/base.html' %}
+{% load custom_filters %}
+
+{% block title %}Ordres de Travail - GMAO App{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- En-tête -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-tasks mr-3 text-gmao-600"></i>
+                    {% if user_role == 'TECHNICIEN' %}
+                        Mes ordres de travail
+                    {% else %}
+                        Ordres de Travail
+                    {% endif %}
+                </h1>
+                <p class="text-gray-600 mt-1">
+                    {% if user_role == 'TECHNICIEN' %}
+                        Ordres de travail qui vous sont assignés
+                    {% else %}
+                        Gérez et suivez tous vos ordres de travail
+                    {% endif %}
+                </p>
+            </div>
+            {% if user_role in 'MANAGER,ADMIN' %}
+            <a href="{% url 'creer_ordre_travail' %}" class="bg-gmao-600 hover:bg-gmao-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center">
+                <i class="fas fa-plus mr-2"></i>
+                Nouvel ordre de travail
+            </a>
+            {% endif %}
+        </div>
+        
+        <!-- Badges de statut pour les techniciens -->
+        {% if user_role == 'TECHNICIEN' %}
+        <div class="mt-4 flex flex-wrap gap-2">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                <i class="fas fa-user mr-1"></i>
+                Vue technicien
+            </span>
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                {{ ordres_page.paginator.count }} ordre{{ ordres_page.paginator.count|pluralize }} assigné{{ ordres_page.paginator.count|pluralize }}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Filtres et recherche -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <form method="get" class="space-y-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                <!-- Recherche -->
+                <div class="sm:col-span-2">
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Recherche</label>
+                    <input type="text" name="search" id="search" value="" 
+                           placeholder="Titre, équipement, intervention..." 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500">
+                </div>
+                
+                <!-- Statut -->
+                <div>
+                    <label for="statut" class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                    <select name="statut" id="statut" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500">
+                        <option value="">Tous les statuts</option>
+                        {% for statut in statuts %}
+                        <option value="{{ statut.nom }}" {% if current_filters.statut == statut.nom %}selected{% endif %}>
+                            {{ statut.nom }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Priorité -->
+                <div>
+                    <label for="priorite" class="block text-sm font-medium text-gray-700 mb-2">Priorité</label>
+                    <select name="priorite" id="priorite" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500">
+                        <option value="">Toutes les priorités</option>
+                        {% for value, text in priorites %}
+                        <option value="{{ value }}" {% if current_filters.priorite == value|stringformat:"s" %}selected{% endif %}>
+                            {{ text }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Type -->
+                <div>
+                    <label for="type_OT" class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <select name="type_OT" id="type_OT" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gmao-500">
+                        <option value="">Tous les types</option>
+                        {% for value, text in types_ot %}
+                        <option value="{{ value }}" {% if current_filters.type_OT == value %}selected{% endif %}>
+                            {{ text }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <a href="{% url 'liste_ordres_travail' %}" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md text-sm font-medium">
+                    Réinitialiser
+                </a>
+                <button type="submit" class="bg-gmao-600 hover:bg-gmao-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center">
+                    <i class="fas fa-search mr-2"></i>
+                    Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Liste des ordres -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        {% if ordres_page.object_list %}
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">
+                {{ ordres_page.paginator.count }} ordre{{ ordres_page.paginator.count|pluralize }} de travail
+            </h3>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Ordre de travail
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Équipement
+                        </th>
+                        {% if user_role in 'MANAGER,ADMIN' %}
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Assigné à
+                        </th>
+                        {% endif %}
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Priorité
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Statut
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Date prévue
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for ordre in ordres_page %}
+                    <tr class="hover:bg-gray-50 {% if ordre.priorite == 4 %}bg-red-50{% elif ordre.priorite == 3 %}bg-orange-50{% endif %}">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">
+                                    <a href="{% url 'detail_ordre_travail' ordre.pk %}" class="hover:text-gmao-600">
+                                        {{ ordre.titre }}
+                                    </a>
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    OT-{{ ordre.id }} • {{ ordre.get_type_OT_display }} • {{ ordre.intervention.nom }}
+                                </div>
+                                {% if ordre.date_debut_reel and not ordre.date_fin_reelle %}
+                                <div class="text-xs text-green-600 mt-1">
+                                    <i class="fas fa-play mr-1"></i>
+                                    En cours depuis {{ ordre.date_debut_reel|timesince }}
+                                </div>
+                                {% elif ordre.date_fin_reelle %}
+                                <div class="text-xs text-blue-600 mt-1">
+                                    <i class="fas fa-check mr-1"></i>
+                                    Terminée le {{ ordre.date_fin_reelle|date:"d/m à H:i" }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ ordre.asset.nom }}</div>
+                            <div class="text-sm text-gray-500">{{ ordre.asset.reference|default:"Pas de référence" }}</div>
+                            {% if ordre.asset.localisation_texte %}
+                            <div class="text-xs text-gray-400">{{ ordre.asset.localisation_texte }}</div>
+                            {% endif %}
+                        </td>
+                        {% if user_role in 'MANAGER,ADMIN' %}
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                {% if ordre.assigne_a_technicien %}
+                                <i class="fas fa-user mr-1 text-blue-500"></i>
+                                {{ ordre.assigne_a_technicien.get_full_name|default:ordre.assigne_a_technicien.username }}
+                                {% elif ordre.assigne_a_equipe %}
+                                <i class="fas fa-users mr-1 text-purple-500"></i>
+                                {{ ordre.assigne_a_equipe.nom }}
+                                {% else %}
+                                <span class="text-red-400 italic">Non assigné</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                Créé par {{ ordre.cree_par.get_full_name|default:ordre.cree_par.username }}
+                            </div>
+                        </td>
+                        {% endif %}
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ ordre.priorite|priority_class }}">
+                                {% if ordre.priorite == 4 %}
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                {% elif ordre.priorite == 3 %}
+                                <i class="fas fa-exclamation mr-1"></i>
+                                {% endif %}
+                                {{ ordre.priorite|priority_text }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if ordre.statut %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                {% if ordre.statut.nom == 'NOUVEAU' %}bg-blue-100 text-blue-800
+                                {% elif ordre.statut.nom == 'EN_COURS' %}bg-yellow-100 text-yellow-800
+                                {% elif ordre.statut.nom == 'EN_ATTENTE' %}bg-gray-100 text-gray-800
+                                {% elif ordre.statut.nom == 'TERMINE' %}bg-green-100 text-green-800
+                                {% elif ordre.statut.nom == 'ANNULE' %}bg-red-100 text-red-800
+                                {% else %}bg-purple-100 text-purple-800{% endif %}">
+                                {% if ordre.statut.nom == 'EN_COURS' %}
+                                <i class="fas fa-play mr-1"></i>
+                                {% elif ordre.statut.nom == 'TERMINE' %}
+                                <i class="fas fa-check mr-1"></i>
+                                {% elif ordre.statut.nom == 'ANNULE' %}
+                                <i class="fas fa-times mr-1"></i>
+                                {% endif %}
+                                {{ ordre.statut.nom }}
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Nouveau
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ ordre.date_prevue_debut|date:"d/m/Y" }}</div>
+                            <div class="text-sm text-gray-500">{{ ordre.date_prevue_debut|time:"H:i" }}</div>
+                            {% if ordre.date_prevue_debut|date:"Y-m-d" < "now"|date:"Y-m-d" and not ordre.statut.est_statut_final %}
+                            <div class="text-xs text-red-600 mt-1">
+                                <i class="fas fa-clock mr-1"></i>
+                                En retard
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div class="flex justify-end space-x-2">
+                                <!-- Voir -->
+                                <a href="{% url 'detail_ordre_travail' ordre.pk %}" 
+                                   class="text-gmao-600 hover:text-gmao-900 p-1" title="Voir les détails">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                
+                                <!-- Actions selon le rôle et l'état -->
+                                {% if not ordre.statut.est_statut_final %}
+                                    <!-- Pour les techniciens et personnes assignées -->
+                                    {% if user_role == 'TECHNICIEN' or ordre.assigne_a_technicien == user or user in ordre.assigne_a_equipe.membres.all %}
+                                        {% if not ordre.date_debut_reel %}
+                                        <a href="{% url 'commencer_intervention' ordre.pk %}" 
+                                           class="text-green-600 hover:text-green-900 p-1" title="Commencer l'intervention">
+                                            <i class="fas fa-play"></i>
+                                        </a>
+                                        {% elif ordre.rapport.statut_rapport != 'FINALISE' %}
+                                        <a href="{% url 'executer_intervention' ordre.pk %}" 
+                                           class="text-blue-600 hover:text-blue-900 p-1" title="Continuer l'intervention">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% endif %}
+                                    {% endif %}
+                                    
+                                    <!-- Pour les managers/admins -->
+                                    {% if user_role in 'MANAGER,ADMIN' %}
+                                    <a href="{% url 'modifier_ordre_travail' ordre.pk %}" 
+                                       class="text-orange-600 hover:text-orange-900 p-1" title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    
+                                    <a href="{% url 'supprimer_ordre_travail' ordre.pk %}" 
+                                       class="text-red-600 hover:text-red-900 p-1" title="Supprimer"
+                                       onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet ordre de travail ?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                {% else %}
+                                    <!-- Ordre terminé/annulé -->
+                                    {% if ordre.rapport.statut_rapport == 'FINALISE' %}
+                                    <a href="{% url 'export_rapport_pdf' ordre.rapport.pk %}" 
+                                       class="text-purple-600 hover:text-purple-900 p-1" title="Exporter PDF">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if ordres_page.has_other_pages %}
+        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div class="flex-1 flex justify-between sm:hidden">
+                {% if ordres_page.has_previous %}
+                <a href="?page={{ ordres_page.previous_page_number }}&{{ request.GET.urlencode }}" 
+                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Précédent
+                </a>
+                {% endif %}
+                {% if ordres_page.has_next %}
+                <a href="?page={{ ordres_page.next_page_number }}&{{ request.GET.urlencode }}" 
+                   class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Suivant
+                </a>
+                {% endif %}
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Affichage de 
+                        <span class="font-medium">{{ ordres_page.start_index }}</span>
+                        à 
+                        <span class="font-medium">{{ ordres_page.end_index }}</span>
+                        sur 
+                        <span class="font-medium">{{ ordres_page.paginator.count }}</span>
+                        résultats
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        {% if ordres_page.has_previous %}
+                        <a href="?page={{ ordres_page.previous_page_number }}&{{ request.GET.urlencode }}" 
+                           class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                        {% endif %}
+                        
+                        {% for page_num in ordres_page.paginator.page_range %}
+                        {% if page_num == ordres_page.number %}
+                        <span aria-current="page" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-gmao-50 text-sm font-medium text-gmao-600">
+                            {{ page_num }}
+                        </span>
+                        {% elif page_num > ordres_page.number|add:'-3' and page_num < ordres_page.number|add:'3' %}
+                        <a href="?page={{ page_num }}&{{ request.GET.urlencode }}" 
+                           class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            {{ page_num }}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if ordres_page.has_next %}
+                        <a href="?page={{ ordres_page.next_page_number }}&{{ request.GET.urlencode }}" 
+                           class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <!-- État vide -->
+        <div class="text-center py-12">
+            <i class="fas fa-clipboard-list text-gray-300 text-6xl mb-4"></i>
+            {% if user_role == 'TECHNICIEN' %}
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun ordre de travail assigné</h3>
+            <p class="text-gray-600 mb-6">Vous n'avez actuellement aucun ordre de travail assigné.</p>
+            {% else %}
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun ordre de travail</h3>
+            <p class="text-gray-600 mb-6">Commencez par créer votre premier ordre de travail.</p>
+            {% if user_role in 'MANAGER,ADMIN' %}
+            <a href="{% url 'creer_ordre_travail' %}" class="bg-gmao-600 hover:bg-gmao-700 text-white px-6 py-3 rounded-md font-medium inline-flex items-center">
+                <i class="fas fa-plus mr-2"></i>
+                Créer un ordre de travail
+            </a>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Légende pour les techniciens -->
+    {% if user_role == 'TECHNICIEN' %}
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 class="text-sm font-medium text-blue-900 mb-2">
+            <i class="fas fa-info-circle mr-1"></i>
+            Guide rapide - Actions disponibles
+        </h4>
+        <div class="text-xs text-blue-800 space-y-1">
+            <div><i class="fas fa-eye mr-2 w-4"></i>Voir les détails de l'ordre de travail</div>
+            <div><i class="fas fa-play mr-2 w-4 text-green-600"></i>Commencer une intervention non démarrée</div>
+            <div><i class="fas fa-edit mr-2 w-4 text-blue-600"></i>Continuer une intervention en cours</div>
+            <div><i class="fas fa-download mr-2 w-4 text-purple-600"></i>Télécharger le rapport d'une intervention terminée</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Auto-refresh pour les ordres en cours (uniquement pour les techniciens)
+{% if user_role == 'TECHNICIEN' %}
+setInterval(function() {
+    // Vérifier s'il y a de nouveaux ordres assignés
+    fetch('{% url "liste_ordres_travail" %}?ajax=1')
+        .then(response => response.json())
+        .then(data => {
+            if (data.new_orders_count > 0) {
+                // Afficher une notification
+                showNotification('Nouveaux ordres de travail assignés!', 'info');
+            }
+        })
+        .catch(error => console.log('Erreur de vérification des nouveaux ordres'));
+}, 60000); // Vérifier toutes les minutes
+
+function showNotification(message, type) {
+    // Créer une notification toast
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-md shadow-lg z-50 ${
+        type === 'info' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'
+    }`;
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-bell mr-2"></i>
+            <span>${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(notification);
+    
+    // Auto-suppression après 5 secondes
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+{% endif %}
+</script>
+{% endblock %}

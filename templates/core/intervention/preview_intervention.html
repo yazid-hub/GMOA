@@ -1,0 +1,272 @@
+{% extends 'core/base.html' %}
+{% load custom_filters %}
+
+{% block title %}Aperçu Intervention - {{ intervention.nom }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- En-tête avec badge preview -->
+    <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center space-x-3 mb-2">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white bg-opacity-20 text-white">
+                        <i class="fas fa-eye mr-2"></i>
+                        MODE APERÇU
+                    </span>
+                    <span class="text-purple-100">Vue technicien simulée</span>
+                </div>
+                <h1 class="text-2xl font-bold">{{ intervention.nom }}</h1>
+                <p class="text-purple-100 mt-1">{{ intervention.description }}</p>
+            </div>
+            <div class="text-right">
+                <div class="text-sm text-purple-100">Durée estimée</div>
+                <div class="text-2xl font-bold">{{ intervention.duree_estimee_heures }}h</div>
+                <div class="text-sm text-purple-100">{{ intervention.techniciens_requis }} technicien{{ intervention.techniciens_requis|pluralize }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informations sur l'aperçu -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-400 text-lg"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">Aperçu de l'intervention</h3>
+                <p class="mt-1 text-sm text-blue-700">
+                    Cet aperçu montre comment l'intervention apparaîtra aux techniciens lors de l'exécution.
+                    Les réponses affichées sont des exemples de démonstration.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-medium text-gray-900">Actions disponibles</h3>
+            <div class="flex space-x-3">
+                <a href="{% url 'intervention_builder' intervention.pk %}" 
+                   class="bg-gmao-600 hover:bg-gmao-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    <i class="fas fa-edit mr-2"></i>
+                    Retour à l'édition
+                </a>
+                <button onclick="window.print()" 
+                        class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    <i class="fas fa-print mr-2"></i>
+                    Imprimer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Simulation du formulaire d'exécution -->
+    <form class="space-y-6">
+        {% for operation in operations %}
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <!-- En-tête de l'opération -->
+            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                    <span class="bg-gmao-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold mr-3">
+                        {{ operation.ordre }}
+                    </span>
+                    {{ operation.nom }}
+                </h3>
+            </div>
+            
+            <!-- Points de contrôle -->
+            <div class="p-6">
+                {% if operation.points_de_controle.all %}
+                <div class="space-y-6">
+                    {% for point in operation.points_de_controle.all %}
+                    <div class="border-l-4 border-gmao-500 pl-4 py-2">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-900 mb-2">
+                                    {{ point.label }}
+                                    {% if point.est_obligatoire %}
+                                    <span class="text-red-500 ml-1">*</span>
+                                    {% endif %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 ml-2">
+                                        {{ point.get_type_champ_display }}
+                                    </span>
+                                </label>
+                                
+                                {% if point.aide %}
+                                <p class="text-xs text-gray-500 mb-3 bg-gray-50 p-2 rounded">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    {{ point.aide }}
+                                </p>
+                                {% endif %}
+                                
+                                <!-- Champ de saisie simulé selon le type -->
+                                <div class="max-w-md">
+                                    {% if point.type_champ == 'BOOLEAN' %}
+                                    <select class="w-full px-3 py-2 border border-gray-300 rounded-md bg-green-50" disabled>
+                                        <option>{{ reponses_demo|get_item:point.id }}</option>
+                                    </select>
+                                    
+                                    {% elif point.type_champ == 'SELECT' and point.options %}
+                                    <select class="w-full px-3 py-2 border border-gray-300 rounded-md bg-green-50" disabled>
+                                        <option>{{ reponses_demo|get_item:point.id }}</option>
+                                    </select>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        Options: {{ point.options|split:';'|join:', ' }}
+                                    </div>
+                                    
+                                    {% elif point.type_champ == 'NUMBER' %}
+                                    <input type="number" value="{{ reponses_demo|get_item:point.id }}" 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md bg-green-50" readonly>
+                                    
+                                    {% elif point.type_champ == 'DATE' %}
+                                    <input type="date" value="{{ reponses_demo|get_item:point.id }}" 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md bg-green-50" readonly>
+                                    
+                                    {% elif point.type_champ == 'TIME' %}
+                                    <input type="time" value="{{ reponses_demo|get_item:point.id }}" 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md bg-green-50" readonly>
+                                    
+                                    {% elif point.type_champ == 'DATETIME' %}
+                                    <input type="datetime-local" value="{{ reponses_demo|get_item:point.id }}" 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md bg-green-50" readonly>
+                                    
+                                    {% elif point.type_champ == 'TEXTAREA' %}
+                                    <textarea rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-green-50" readonly>{{ reponses_demo|get_item:point.id }}</textarea>
+                                    
+                                    {% else %}
+                                    <input type="text" value="{{ reponses_demo|get_item:point.id }}" 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md bg-green-50" readonly>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Options média -->
+                            <div class="ml-4 flex space-x-2">
+                                {% if point.permettre_photo %}
+                                <div class="p-2 text-green-600 border border-green-300 rounded bg-green-50" title="Photos autorisées">
+                                    <i class="fas fa-camera"></i>
+                                </div>
+                                {% endif %}
+                                
+                                {% if point.permettre_audio %}
+                                <div class="p-2 text-blue-600 border border-blue-300 rounded bg-blue-50" title="Audio autorisé">
+                                    <i class="fas fa-microphone"></i>
+                                </div>
+                                {% endif %}
+                                
+                                {% if point.permettre_video %}
+                                <div class="p-2 text-purple-600 border border-purple-300 rounded bg-purple-50" title="Vidéo autorisée">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                {% endif %}
+                                {% if point.permettre_fichiers and point.types_fichiers_autorises %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800" title="fichiers autorisée">
+                                    <i class="fas fa-file mr-1"></i> 
+                                    Fichiers ({{ point.types_fichiers_autorises|upper }})
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-clipboard text-3xl mb-4"></i>
+                    <p>Aucun point de contrôle défini pour cette opération.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        
+        {% if not operations %}
+        <div class="bg-white shadow rounded-lg p-8 text-center">
+            <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Intervention non configurée</h3>
+            <p class="text-gray-600">Cette intervention n'a pas encore d'opérations définies.</p>
+            <a href="{% url 'intervention_builder' intervention.pk %}" 
+               class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gmao-600 hover:bg-gmao-700">
+                Configurer l'intervention
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- Simulation des boutons d'action -->
+        {% if operations %}
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900">Actions (simulation)</h3>
+                    <p class="text-sm text-gray-600">Boutons qui apparaîtront lors de l'exécution réelle</p>
+                </div>
+                
+                <div class="flex space-x-4">
+                    <button type="button" class="bg-blue-600 text-white px-6 py-3 rounded-md font-medium cursor-not-allowed opacity-50" disabled>
+                        <i class="fas fa-save mr-2"></i>
+                        Sauvegarder les réponses
+                    </button>
+                    
+                    <button type="button" class="bg-green-600 text-white px-6 py-3 rounded-md font-medium cursor-not-allowed opacity-50" disabled>
+                        <i class="fas fa-check-circle mr-2"></i>
+                        Finaliser l'intervention
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </form>
+
+    <!-- Statistiques de l'intervention -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Statistiques de l'intervention</h3>
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="text-center">
+                <div class="text-2xl font-bold text-gmao-600">{{ operations.count }}</div>
+                <div class="text-sm text-gray-500">Opération{{ operations.count|pluralize }}</div>
+            </div>
+            
+            <div class="text-center">
+                {% with total_points=0 %}
+                {% for op in operations %}
+                    {% with total_points=total_points|add:op.points_de_controle.count %}{% endwith %}
+                {% endfor %}
+                <div class="text-2xl font-bold text-blue-600">{{ total_points }}</div>
+                <div class="text-sm text-gray-500">Point{{ total_points|pluralize }} de contrôle</div>
+                {% endwith %}
+            </div>
+            
+            <div class="text-center">
+                {% with obligatoires=0 %}
+                {% for op in operations %}
+                    {% for point in op.points_de_controle.all %}
+                        {% if point.est_obligatoire %}
+                            {% with obligatoires=obligatoires|add:1 %}{% endwith %}
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+                <div class="text-2xl font-bold text-red-600">{{ obligatoires }}</div>
+                <div class="text-sm text-gray-500">Obligatoire{{ obligatoires|pluralize }}</div>
+                {% endwith %}
+            </div>
+            
+            <div class="text-center">
+                <div class="text-2xl font-bold text-green-600">{{ intervention.duree_estimee_heures }}h</div>
+                <div class="text-sm text-gray-500">Durée estimée</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Style pour l'impression */
+@media print {
+    .no-print { display: none !important; }
+    body { background: white !important; }
+    .bg-gradient-to-r { background: #6b46c1 !important; }
+}
+</style>
+{% endblock %}
