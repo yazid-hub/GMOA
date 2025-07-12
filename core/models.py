@@ -444,6 +444,14 @@ class FichierMedia(models.Model):
     coordonnees_gps = models.JSONField(null=True)
     metadonnees = models.JSONField(default=dict)
     statut_traitement = models.CharField(max_length=20, default='EN_COURS')
+    uploade_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='medias_uploades',
+        help_text="Utilisateur qui a uploadé ce média"
+    )
     class Meta:
         verbose_name = "Média enrichi"
         verbose_name_plural = "Médias enrichis"

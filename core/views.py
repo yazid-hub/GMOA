@@ -2814,16 +2814,25 @@ def save_draft_intervention(request, pk):
     """
     Sauvegarde des données de brouillon SANS validation des champs obligatoires
     """
+    print(f"DEBUG: save_draft_intervention appelée avec pk={pk}")
+    print(f"DEBUG: content_type={request.content_type}")
+    print(f"DEBUG: user={request.user}")
+    
     try:
         ordre_travail = get_object_or_404(OrdreDeTravail, pk=pk)
+        print(f"DEBUG: ordre_travail trouvé - {ordre_travail}")
         
         # Vérifier les permissions
         user_role = get_user_role(request.user)
+        print(f"DEBUG: user_role={user_role}")
+        
         peut_executer = (
             ordre_travail.assigne_a_technicien == request.user or
             (ordre_travail.assigne_a_equipe and request.user in ordre_travail.assigne_a_equipe.membres.all()) or
             user_role in ['MANAGER', 'ADMIN']
         )
+        
+        print(f"DEBUG: peut_executer={peut_executer}")
         
         if not peut_executer:
             return JsonResponse({
@@ -2838,17 +2847,22 @@ def save_draft_intervention(request, pk):
             # Fallback pour form data
             draft_data = {key: value for key, value in request.POST.items() if key.startswith('reponse_')}
         
+        print(f"DEBUG: draft_data={draft_data}")
+        
         # Créer ou mettre à jour le rapport
         rapport, created = RapportExecution.objects.get_or_create(
             ordre_de_travail=ordre_travail,
             defaults={
                 'statut_rapport': 'BROUILLON',
                 'cree_par': request.user,
-                'date_execution_debut': timezone.now() if created else None
+                'date_execution_debut': timezone.now()
             }
         )
         
+        print(f"DEBUG: rapport {'créé' if created else 'existant'} - ID {rapport.id}")
+        
         # Sauvegarder les réponses individuelles (SANS validation)
+        saved_count = 0
         for key, value in draft_data.items():
             if key.startswith('reponse_') and value:
                 try:
@@ -2868,22 +2882,30 @@ def save_draft_intervention(request, pk):
                     if not created:
                         reponse.valeur = str(value)
                         reponse.save()
+                    
+                    saved_count += 1
+                    print(f"DEBUG: réponse {'créée' if created else 'mise à jour'} pour point {point_id}")
                         
-                except (ValueError, PointDeControle.DoesNotExist):
+                except (ValueError, PointDeControle.DoesNotExist) as e:
+                    print(f"DEBUG: erreur pour {key}: {e}")
                     continue  # Ignorer les erreurs pour les brouillons
+        
+        print(f"DEBUG: {saved_count} réponses sauvegardées")
         
         return JsonResponse({
             'success': True,
-            'message': 'Brouillon sauvegardé'
+            'message': f'Brouillon sauvegardé ({saved_count} réponses)'
         })
         
     except Exception as e:
+        print(f"ERREUR save_draft_intervention: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'error': f'Erreur serveur: {str(e)}'
         }, status=500)
-
-
+    
 @login_required
 @require_http_methods(["GET"])
 def load_draft_intervention(request, pk):
@@ -3143,3 +3165,263 @@ def get_medias_intervention(request, pk):
         }, status=500)
 
 
+
+
+# À ajouter dans core/views.py
+
+@login_required
+@require_http_methods(["POST"])
+def upload_media_complete(request):
+    """
+    Vue complète qui gère upload + permissions + création auto des objets manquants
+    """
+    try:
+        fichier = request.FILES.get('fichier')
+        point_id = request.POST.get('point_id')
+        type_fichier = request.POST.get('type_fichier', 'PHOTO')
+        ordre_travail_id = request.POST.get('ordre_travail_id')
+        
+        print(f"DEBUG upload_media_complete: fichier={fichier}, point_id={point_id}, type_fichier={type_fichier}, ordre_travail_id={ordre_travail_id}")
+        
+        if not fichier or not point_id or not ordre_travail_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Paramètres manquants (fichier, point_id, ordre_travail_id requis)'
+            }, status=400)
+        
+        # Récupérer les objets
+        try:
+            point = PointDeControle.objects.get(id=point_id)
+            ordre_travail = OrdreDeTravail.objects.get(id=ordre_travail_id)
+        except (PointDeControle.DoesNotExist, OrdreDeTravail.DoesNotExist):
+            return JsonResponse({
+                'success': False,
+                'error': 'Point de contrôle ou ordre de travail introuvable'
+            }, status=404)
+        
+        # Vérifier les permissions d'upload
+        if not _check_media_permissions(point, type_fichier):
+            return JsonResponse({
+                'success': False,
+                'error': f'Type de média non autorisé pour ce point. type_fichier={type_fichier}, permettre_photo={point.permettre_photo}, permettre_audio={point.permettre_audio}, permettre_video={point.permettre_video}, permettre_fichiers={point.permettre_fichiers}'
+            }, status=403)
+        
+        # Vérifier permissions utilisateur
+        user_role = get_user_role(request.user)
+        peut_executer = (
+            ordre_travail.assigne_a_technicien == request.user or
+            (ordre_travail.assigne_a_equipe and request.user in ordre_travail.assigne_a_equipe.membres.all()) or
+            user_role in ['MANAGER', 'ADMIN']
+        )
+        
+        if not peut_executer:
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission refusée pour cet ordre de travail'
+            }, status=403)
+        
+        # Vérifier la taille du fichier
+        max_size = getattr(point, 'taille_max_fichier_mb', 10) * 1024 * 1024
+        if fichier.size > max_size:
+            return JsonResponse({
+                'success': False,
+                'error': f'Fichier trop volumineux. Taille max: {point.taille_max_fichier_mb}MB'
+            }, status=400)
+        
+        # Créer ou récupérer le rapport d'exécution
+        rapport, rapport_created = RapportExecution.objects.get_or_create(
+            ordre_de_travail=ordre_travail,
+            defaults={
+                'statut_rapport': 'BROUILLON',
+                'cree_par': request.user,
+                'date_execution_debut': timezone.now()
+            }
+        )
+        
+        # Créer ou récupérer la réponse pour ce point
+        reponse, reponse_created = Reponse.objects.get_or_create(
+            rapport_execution=rapport,
+            point_de_controle=point,
+            defaults={
+                'valeur': f'Média ajouté: {fichier.name}',
+                'est_conforme': True
+            }
+        )
+        
+        # Si la réponse existait déjà, on met à jour la valeur
+        if not reponse_created:
+            reponse.valeur = f'Média mis à jour: {fichier.name}'
+            reponse.save()
+        
+        # Créer le fichier média
+        fichier_media = FichierMedia.objects.create(
+            reponse=reponse,
+            type_fichier=type_fichier.upper(),
+            fichier=fichier,
+            nom_original=fichier.name,
+            taille_octets=fichier.size,
+            uploade_par=request.user
+        )
+        
+        # Préparer les données de réponse
+        file_ext = os.path.splitext(fichier.name)[1] if '.' in fichier.name else ''
+        is_image = file_ext.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+        is_video = file_ext.lower() in ['.mp4', '.avi', '.mov', '.webm']
+        is_audio = file_ext.lower() in ['.mp3', '.wav', '.aac', '.m4a']
+        
+        media_data = {
+            'id': fichier_media.id,
+            'fichier_url': fichier_media.fichier.url,
+            'nom_original': fichier_media.nom_original,
+            'type_fichier': fichier_media.type_fichier,
+            'taille_octets': fichier_media.taille_octets,
+            'taille_formatee': _format_file_size(fichier_media.taille_octets),
+            'date_upload': fichier_media.date_upload.isoformat(),
+            'is_image': is_image,
+            'is_video': is_video,
+            'is_audio': is_audio,
+            'extension': file_ext[1:] if file_ext else '',
+            'point_id': point.id,
+            'reponse_id': reponse.id
+        }
+        
+        print(f"DEBUG: Média créé avec succès - {media_data}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Fichier {fichier.name} uploadé avec succès',
+            'media': media_data
+        })
+        
+    except Exception as e:
+        print(f"ERREUR dans upload_media_complete: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        }, status=500)
+
+@login_required
+@require_http_methods(["GET"])
+def get_medias_point(request, point_id):
+    """
+    Récupère tous les médias pour un point de contrôle donné
+    """
+    print(f"DEBUG get_medias_point: appelée pour point_id={point_id}")
+    
+    try:
+        point = get_object_or_404(PointDeControle, pk=point_id)
+        print(f"DEBUG get_medias_point: point trouvé - {point.label}")
+        
+        # Récupérer les médias liés à ce point via les réponses
+        medias = FichierMedia.objects.filter(
+            reponse__point_de_controle=point
+        ).select_related('reponse__rapport_execution__ordre_de_travail')
+        
+        print(f"DEBUG get_medias_point: {medias.count()} médias trouvés")
+        
+        medias_data = []
+        for media in medias:
+            print(f"DEBUG get_medias_point: traitement média {media.id} - {media.nom_original}")
+            
+            file_ext = os.path.splitext(media.nom_original)[1] if '.' in media.nom_original else ''
+            is_image = file_ext.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+            is_video = file_ext.lower() in ['.mp4', '.avi', '.mov', '.webm']
+            is_audio = file_ext.lower() in ['.mp3', '.wav', '.aac', '.m4a']
+            
+            medias_data.append({
+                'id': media.id,
+                'fichier_url': media.fichier.url,
+                'nom_original': media.nom_original,
+                'type_fichier': media.type_fichier,
+                'taille_octets': media.taille_octets,
+                'taille_formatee': _format_file_size(media.taille_octets),
+                'date_upload': media.date_upload.isoformat(),
+                'is_image': is_image,
+                'is_video': is_video,
+                'is_audio': is_audio,
+                'extension': file_ext[1:] if file_ext else '',
+                'point_id': point.id,
+                'uploade_par': media.uploade_par.username if media.uploade_par else 'Inconnu'
+            })
+        
+        print(f"DEBUG get_medias_point: retour de {len(medias_data)} médias")
+        
+        return JsonResponse({
+            'success': True,
+            'medias': medias_data
+        })
+        
+    except Exception as e:
+        print(f"ERREUR get_medias_point: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_media_complete(request, media_id):
+    """
+    Supprime un média avec vérifications complètes
+    """
+    try:
+        media = get_object_or_404(FichierMedia, pk=media_id)
+        
+        # Vérifier permissions
+        ordre_travail = media.reponse.rapport_execution.ordre_de_travail
+        user_role = get_user_role(request.user)
+        peut_supprimer = (
+            ordre_travail.assigne_a_technicien == request.user or
+            (ordre_travail.assigne_a_equipe and request.user in ordre_travail.assigne_a_equipe.membres.all()) or
+            media.uploade_par == request.user or
+            user_role in ['MANAGER', 'ADMIN']
+        )
+        
+        if not peut_supprimer:
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission refusée pour supprimer ce média'
+            }, status=403)
+        
+        # Supprimer le fichier physique
+        if media.fichier:
+            try:
+                media.fichier.delete(save=False)
+            except Exception as e:
+                print(f"Erreur suppression fichier physique: {e}")
+        
+        # Supprimer l'enregistrement
+        media_name = media.nom_original
+        media.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Média {media_name} supprimé avec succès'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        }, status=500)
+
+
+def _format_file_size(size_bytes):
+    """
+    Formate la taille d'un fichier en format lisible
+    """
+    if size_bytes == 0:
+        return "0 B"
+    
+    size_names = ["B", "KB", "MB", "GB"]
+    i = 0
+    while size_bytes >= 1024 and i < len(size_names) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    
+    return f"{size_bytes:.1f} {size_names[i]}"

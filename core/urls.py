@@ -164,6 +164,12 @@ urlpatterns = [
     path('ordres-travail/<int:pk>/medias/', views.get_medias_intervention, name='get_medias_intervention'),
     path('upload-media-ajax/', views.upload_media_ajax, name='upload_media_ajax'),
     path('media/<int:media_id>/delete/', views.delete_media_ajax, name='delete_media_ajax'),
+
+    # Dans la section GESTION DES MÉDIAS
+    path('ajax/upload-media-complete/', views.upload_media_complete, name='upload_media_complete'),
+    path('ajax/get-medias-point/<int:point_id>/', views.get_medias_point, name='get_medias_point'),
+    path('ajax/delete-media-complete/<int:media_id>/', views.delete_media_complete, name='delete_media_complete'),
+
 ]
 
 

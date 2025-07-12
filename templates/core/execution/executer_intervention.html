@@ -340,13 +340,32 @@ function saveDraft() {
         }
     }
     
-    // Simple localStorage pour l'instant
+    // 1. Sauvegarde locale IMMÉDIATE (même hors connexion)
     localStorage.setItem(`draft_${ordreId}`, JSON.stringify(draftData));
     
-    setTimeout(() => {
+    // 2. Sauvegarde serveur (si connexion disponible)
+    fetch(`/ordres-travail/${ordreId}/save-draft/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(draftData)
+    })
+    .then(response => response.json())
+    .then(data => {
         saveStatus.classList.add('hidden');
-        showToast('Brouillon sauvegardé localement', 'success');
-    }, 1000);
+        if (data.success) {
+            showToast('Brouillon sauvegardé sur le serveur', 'success');
+        } else {
+            showToast('Sauvegarde locale OK, serveur échoué: ' + data.error, 'warning');
+        }
+    })
+    .catch(error => {
+        saveStatus.classList.add('hidden');
+        console.warn('Erreur sauvegarde serveur:', error);
+        showToast('Sauvegarde locale OK, serveur inaccessible', 'warning');
+    });
 }
 
 function finalize() {
@@ -560,8 +579,8 @@ function uploadMedia(blob, pointId, type, filename) {
         progressContainer.classList.remove('hidden');
     }
     
-    // Upload réel ou simulé selon disponibilité URL
-    const uploadUrl = '/ajax/upload-media-simple/'; // Vue de test plus permissive
+    // Upload réel avec toutes les fonctionnalités
+    const uploadUrl = '/ajax/upload-media-complete/'; // Vue complète avec permissions + auto-création objets
     
     const xhr = new XMLHttpRequest();
     
@@ -724,6 +743,8 @@ function closeViewModal() {
     document.getElementById('view-modal').classList.add('hidden');
 }
 
+
+
 // Initialisation
 document.addEventListener('DOMContentLoaded', function() {
     // IMPORTANT: Initialiser les données en premier
@@ -774,6 +795,78 @@ function updateProgress() {
     document.getElementById('progress-bar').style.width = percentage + '%';
     document.getElementById('progress-text').textContent = Math.round(percentage) + '%';
     document.getElementById('completion-status').textContent = `${filledFields} sur ${totalFields} champs remplis`;
+}
+
+function loadExistingMedias() {
+    // Éviter les appels multiples
+    if (window.mediasLoaded) {
+        console.log('>>> Médias déjà chargés, on ignore');
+        return;
+    }
+    window.mediasLoaded = true;
+    
+    console.log('>>> loadExistingMedias() appelée'); // Debug important
+    
+    // Charger les médias existants pour chaque point
+    const pointContainers = document.querySelectorAll('[id^="media-container-"]');
+    
+    console.log('Chargement des médias pour', pointContainers.length, 'points'); // Debug
+    
+    pointContainers.forEach(container => {
+        const pointId = container.id.replace('media-container-', '');
+        
+        console.log(`Chargement médias pour point ${pointId}...`); // Debug
+        
+        fetch(`/ajax/get-medias-point/${pointId}/`)
+            .then(response => {
+                console.log(`Réponse pour point ${pointId}:`, response.status); // Debug
+                return response.json();
+            })
+            .then(data => {
+                console.log(`Données pour point ${pointId}:`, data); // Debug
+                if (data.success && data.medias) {
+                    console.log(`${data.medias.length} médias trouvés pour point ${pointId}`); // Debug
+                    data.medias.forEach(media => {
+                        addMediaToContainer(media, pointId);
+                    });
+                } else {
+                    console.log(`Pas de médias pour point ${pointId}:`, data.error || 'Aucun média'); // Debug
+                }
+            })
+            .catch(error => {
+                console.error(`Erreur chargement médias pour point ${pointId}:`, error);
+            });
+    });
+}
+loadExistingMedias();
+
+function deleteMedia(mediaId, pointId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce fichier ?')) {
+        return;
+    }
+    
+    fetch(`/ajax/delete-media-complete/${mediaId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const mediaElement = document.querySelector(`[data-media-id="${mediaId}"]`);
+            if (mediaElement) {
+                mediaElement.remove();
+            }
+            showToast('Fichier supprimé', 'success');
+        } else {
+            showToast('Erreur lors de la suppression: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Erreur de connexion', 'error');
+    });
 }
 
 // Auto-update progress
