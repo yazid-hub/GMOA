@@ -12,6 +12,13 @@ def split(value, delimiter):
     return []
 
 @register.filter
+def trim(value):
+    """Supprime les espaces en début et fin de chaîne"""
+    if value:
+        return str(value).strip()
+    return value
+
+@register.filter
 def get_item(dictionary, key):
     """Récupère un élément d'un dictionnaire par sa clé"""
     if dictionary and key is not None:

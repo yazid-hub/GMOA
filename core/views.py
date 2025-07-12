@@ -1756,23 +1756,6 @@ def delete_media_simple(request):
         return JsonResponse({'success': False, 'error': f'Erreur serveur: {str(e)}'}, status=500)
 
 
-def _format_file_size(size_bytes):
-    """
-    Formate la taille du fichier en unités lisibles
-    """
-    if size_bytes == 0:
-        return "0 B"
-    
-    units = ['B', 'KB', 'MB', 'GB']
-    unit_index = 0
-    size = float(size_bytes)
-    
-    while size >= 1024.0 and unit_index < len(units) - 1:
-        size /= 1024.0
-        unit_index += 1
-    
-    return f"{size:.1f} {units[unit_index]}"
-
 
 
 # ==============================================================================
@@ -2632,302 +2615,9 @@ def verifier_suppressions_possibles(request, intervention_id):
 
 
 
-# ==============================================================================
-# GESTION DES MÉDIAS AJAX
-# ==============================================================================
-
-@login_required
-@require_http_methods(["POST"])
-def upload_media_ajax(request):
-    """
-    Upload AJAX de médias pour les points de contrôle
-    """
-    try:
-        fichier = request.FILES.get('fichier')
-        point_id = request.POST.get('point_id')
-        type_fichier = request.POST.get('type_fichier', 'PHOTO')
-        
-        if not fichier or not point_id:
-            return JsonResponse({
-                'success': False,
-                'error': 'Fichier et point_id requis'
-            }, status=400)
-        
-        # Récupérer le point de contrôle
-        try:
-            point = PointDeControle.objects.get(id=point_id)
-        except PointDeControle.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'error': 'Point de contrôle introuvable'
-            }, status=404)
-        
-        # Vérifier les permissions d'upload
-        if not _check_media_permissions(point, type_fichier):
-            return JsonResponse({
-                'success': False,
-                'error': 'Type de média non autorisé pour ce point'
-            }, status=403)
-        
-        # Valider la taille du fichier
-        max_size = point.taille_max_fichier_mb * 1024 * 1024
-        if fichier.size > max_size:
-            return JsonResponse({
-                'success': False,
-                'error': f'Fichier trop volumineux. Maximum: {point.taille_max_fichier_mb}MB'
-            }, status=400)
-        
-        # Valider le type de fichier
-        if not _validate_file_type(fichier, point):
-            return JsonResponse({
-                'success': False,
-                'error': 'Type de fichier non autorisé'
-            }, status=400)
-        
-        # Créer ou récupérer la réponse pour ce point
-        # Note: Il faut adapter selon votre logique de création de réponses
-        ordre_travail_id = request.POST.get('ordre_travail_id')
-        if not ordre_travail_id:
-            return JsonResponse({
-                'success': False,
-                'error': 'ordre_travail_id requis'
-            }, status=400)
-        
-        ordre_travail = get_object_or_404(OrdreDeTravail, id=ordre_travail_id)
-        rapport, created = RapportExecution.objects.get_or_create(
-            ordre_de_travail=ordre_travail,
-            defaults={
-                'statut_rapport': 'EN_COURS',
-                'technicien_execution': request.user
-            }
-        )
-        
-        reponse, created = Reponse.objects.get_or_create(
-            rapport_execution=rapport,
-            point_de_controle=point,
-            defaults={'valeur': ''}
-        )
-        
-        # Traitement d'image si nécessaire
-        if type_fichier.upper() == 'PHOTO' and fichier.content_type.startswith('image/'):
-            fichier = _process_image(fichier, point.taille_max_fichier_mb)
-        
-        # Créer le fichier média
-        fichier_media = FichierMedia.objects.create(
-            reponse=reponse,
-            type_fichier=type_fichier.upper(),
-            fichier=fichier,
-            nom_original=fichier.name,
-            taille_octets=fichier.size
-        )
-        
-        # Ajouter les métadonnées GPS si disponibles
-        latitude = request.POST.get('latitude')
-        longitude = request.POST.get('longitude')
-        if latitude and longitude:
-            try:
-                fichier_media.latitude_capture = float(latitude)
-                fichier_media.longitude_capture = float(longitude)
-                fichier_media.save()
-            except ValueError:
-                pass  # Ignorer les erreurs de conversion GPS
-        
-        # Préparer la réponse
-        media_data = {
-            'id': fichier_media.id,
-            'url': fichier_media.fichier.url,
-            'nom_original': fichier_media.nom_original,
-            'taille_formatee': _format_file_size(fichier_media.taille_octets),
-            'type_mime': fichier.content_type,
-            'is_image': fichier_media.type_fichier == 'PHOTO',
-            'is_video': fichier_media.type_fichier == 'VIDEO',
-            'is_audio': fichier_media.type_fichier == 'AUDIO',
-            'extension': os.path.splitext(fichier_media.nom_original)[1][1:] if '.' in fichier_media.nom_original else ''
-        }
-        
-        return JsonResponse({
-            'success': True,
-            'media': media_data
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Erreur serveur: {str(e)}'
-        }, status=500)
 
 
-@login_required
-@require_http_methods(["POST"])
-def delete_media_ajax(request):
-    """
-    Suppression AJAX d'un média
-    """
-    try:
-        data = json.loads(request.body)
-        media_id = data.get('media_id')
-        
-        if not media_id:
-            return JsonResponse({
-                'success': False,
-                'error': 'media_id requis'
-            }, status=400)
-        
-        try:
-            media = FichierMedia.objects.get(id=media_id)
-        except FichierMedia.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'error': 'Média introuvable'
-            }, status=404)
-        
-        # Vérifier les permissions
-        if not _can_delete_media(request.user, media):
-            return JsonResponse({
-                'success': False,
-                'error': 'Permission refusée'
-            }, status=403)
-        
-        # Supprimer le fichier physique
-        if media.fichier:
-            try:
-                default_storage.delete(media.fichier.name)
-            except:
-                pass  # Ignorer les erreurs de suppression fichier
-        
-        # Supprimer l'enregistrement
-        media.delete()
-        
-        return JsonResponse({'success': True})
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Erreur serveur: {str(e)}'
-        }, status=500)
 
-
-# ==============================================================================
-# GESTION DES BROUILLONS
-# ==============================================================================
-
-@login_required
-@require_http_methods(["POST"])
-def save_draft_intervention(request, pk):
-    """
-    Sauvegarde automatique des brouillons d'intervention
-    """
-    try:
-        ordre_travail = get_object_or_404(OrdreDeTravail, pk=pk)
-        
-        # Vérifier les permissions
-        user_role = get_user_role(request.user)
-        peut_executer = (
-            ordre_travail.assigne_a_technicien == request.user or
-            (ordre_travail.assigne_a_equipe and request.user in ordre_travail.assigne_a_equipe.membres.all()) or
-            user_role in ['MANAGER', 'ADMIN']
-        )
-        
-        if not peut_executer:
-            return JsonResponse({
-                'success': False,
-                'error': 'Permission refusée'
-            }, status=403)
-        
-        # Récupérer les données JSON du brouillon
-        if request.content_type == 'application/json':
-            draft_data = json.loads(request.body)
-        else:
-            draft_data = {key: value for key, value in request.POST.items() if key.startswith('point_')}
-        
-        # Créer ou mettre à jour le brouillon
-        rapport, created = RapportExecution.objects.get_or_create(
-            ordre_de_travail=ordre_travail,
-            defaults={
-                'statut_rapport': 'EN_COURS',
-                'technicien_execution': request.user
-            }
-        )
-        
-        # Note: Adapter selon votre modèle BrouillonIntervention
-        # Si vous n'avez pas ce modèle, utilisez un champ JSON dans RapportExecution
-        try:
-            from .models import BrouillonIntervention
-            brouillon, created = BrouillonIntervention.objects.get_or_create(
-                rapport_execution=rapport,
-                defaults={'donnees_json': draft_data}
-            )
-            if not created:
-                brouillon.donnees_json = draft_data
-                brouillon.save()
-        except ImportError:
-            # Fallback: sauvegarder dans un champ JSON du rapport
-            if not hasattr(rapport, 'donnees_brouillon'):
-                # Créer le champ si nécessaire via migration
-                pass
-            # rapport.donnees_brouillon = draft_data
-            # rapport.save()
-        
-        return JsonResponse({'success': True})
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Erreur serveur: {str(e)}'
-        }, status=500)
-
-
-@login_required
-@require_http_methods(["GET"])
-def load_draft_intervention(request, pk):
-    """
-    Chargement des données de brouillon sauvegardées
-    """
-    try:
-        ordre_travail = get_object_or_404(OrdreDeTravail, pk=pk)
-        
-        # Vérifier les permissions
-        user_role = get_user_role(request.user)
-        peut_executer = (
-            ordre_travail.assigne_a_technicien == request.user or
-            (ordre_travail.assigne_a_equipe and request.user in ordre_travail.assigne_a_equipe.membres.all()) or
-            user_role in ['MANAGER', 'ADMIN']
-        )
-        
-        if not peut_executer:
-            return JsonResponse({
-                'success': False,
-                'error': 'Permission refusée'
-            }, status=403)
-        
-        try:
-            rapport = RapportExecution.objects.get(ordre_de_travail=ordre_travail)
-            
-            # Charger le brouillon
-            try:
-                from .models import BrouillonIntervention
-                brouillon = BrouillonIntervention.objects.get(rapport_execution=rapport)
-                draft_data = brouillon.donnees_json
-            except (ImportError, BrouillonIntervention.DoesNotExist):
-                # Fallback ou pas de brouillon
-                draft_data = {}
-            
-            return JsonResponse({
-                'success': True,
-                'draft': draft_data
-            })
-            
-        except RapportExecution.DoesNotExist:
-            return JsonResponse({
-                'success': True,
-                'draft': {}
-            })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Erreur serveur: {str(e)}'
-        }, status=500)
 
 
 # ==============================================================================
@@ -3114,3 +2804,342 @@ def _sync_media_data(user, media_item):
     """
     # Implémentation de la synchronisation de média
     return {'success': True, 'item_id': media_item.get('id')}
+
+
+# À ajouter dans core/views.py
+
+@login_required
+@require_http_methods(["POST"])
+def save_draft_intervention(request, pk):
+    """
+    Sauvegarde des données de brouillon SANS validation des champs obligatoires
+    """
+    try:
+        ordre_travail = get_object_or_404(OrdreDeTravail, pk=pk)
+        
+        # Vérifier les permissions
+        user_role = get_user_role(request.user)
+        peut_executer = (
+            ordre_travail.assigne_a_technicien == request.user or
+            (ordre_travail.assigne_a_equipe and request.user in ordre_travail.assigne_a_equipe.membres.all()) or
+            user_role in ['MANAGER', 'ADMIN']
+        )
+        
+        if not peut_executer:
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission refusée'
+            }, status=403)
+        
+        # Récupérer les données JSON du brouillon
+        if request.content_type == 'application/json':
+            draft_data = json.loads(request.body)
+        else:
+            # Fallback pour form data
+            draft_data = {key: value for key, value in request.POST.items() if key.startswith('reponse_')}
+        
+        # Créer ou mettre à jour le rapport
+        rapport, created = RapportExecution.objects.get_or_create(
+            ordre_de_travail=ordre_travail,
+            defaults={
+                'statut_rapport': 'BROUILLON',
+                'cree_par': request.user,
+                'date_execution_debut': timezone.now() if created else None
+            }
+        )
+        
+        # Sauvegarder les réponses individuelles (SANS validation)
+        for key, value in draft_data.items():
+            if key.startswith('reponse_') and value:
+                try:
+                    point_id = int(key.replace('reponse_', ''))
+                    point = PointDeControle.objects.get(pk=point_id)
+                    
+                    # Créer ou mettre à jour la réponse
+                    reponse, created = Reponse.objects.get_or_create(
+                        rapport_execution=rapport,
+                        point_de_controle=point,
+                        defaults={
+                            'valeur': str(value),
+                            'est_conforme': True  # Par défaut conforme pour brouillon
+                        }
+                    )
+                    
+                    if not created:
+                        reponse.valeur = str(value)
+                        reponse.save()
+                        
+                except (ValueError, PointDeControle.DoesNotExist):
+                    continue  # Ignorer les erreurs pour les brouillons
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Brouillon sauvegardé'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def load_draft_intervention(request, pk):
+    """
+    Chargement des données de brouillon sauvegardées
+    """
+    try:
+        ordre_travail = get_object_or_404(OrdreDeTravail, pk=pk)
+        
+        # Vérifier les permissions
+        user_role = get_user_role(request.user)
+        peut_executer = (
+            ordre_travail.assigne_a_technicien == request.user or
+            (ordre_travail.assigne_a_equipe and request.user in ordre_travail.assigne_a_equipe.membres.all()) or
+            user_role in ['MANAGER', 'ADMIN']
+        )
+        
+        if not peut_executer:
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission refusée'
+            }, status=403)
+        
+        try:
+            rapport = RapportExecution.objects.get(ordre_de_travail=ordre_travail)
+            
+            # Charger les réponses existantes
+            reponses = Reponse.objects.filter(rapport_execution=rapport)
+            draft_data = {}
+            
+            for reponse in reponses:
+                key = f'reponse_{reponse.point_de_controle.id}'
+                draft_data[key] = reponse.valeur
+            
+            return JsonResponse({
+                'success': True,
+                'draft': draft_data
+            })
+            
+        except RapportExecution.DoesNotExist:
+            return JsonResponse({
+                'success': True,
+                'draft': {}
+            })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def upload_media_ajax(request):
+    """
+    Upload de médias via AJAX pour les points de contrôle
+    """
+    try:
+        fichier = request.FILES.get('fichier')
+        point_id = request.POST.get('point_id')
+        type_fichier = request.POST.get('type_fichier')
+        ordre_travail_id = request.POST.get('ordre_travail_id')
+        
+        if not all([fichier, point_id, type_fichier, ordre_travail_id]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Paramètres manquants'
+            }, status=400)
+        
+        # Vérifications
+        point = get_object_or_404(PointDeControle, pk=point_id)
+        ordre_travail = get_object_or_404(OrdreDeTravail, pk=ordre_travail_id)
+        
+        # Vérifier permissions
+        user_role = get_user_role(request.user)
+        peut_executer = (
+            ordre_travail.assigne_a_technicien == request.user or
+            (ordre_travail.assigne_a_equipe and request.user in ordre_travail.assigne_a_equipe.membres.all()) or
+            user_role in ['MANAGER', 'ADMIN']
+        )
+        
+        if not peut_executer:
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission refusée'
+            }, status=403)
+        
+        # Vérifier si les médias sont autorisés pour ce point
+        if not point.permettre_fichiers:
+            return JsonResponse({
+                'success': False,
+                'error': 'Les fichiers ne sont pas autorisés pour ce point de contrôle'
+            }, status=400)
+        
+        # Vérifier la taille du fichier (max 50MB)
+        max_size = 50 * 1024 * 1024  # 50MB
+        if fichier.size > max_size:
+            return JsonResponse({
+                'success': False,
+                'error': 'Fichier trop volumineux (max 50MB)'
+            }, status=400)
+        
+        # Créer le rapport s'il n'existe pas
+        rapport, created = RapportExecution.objects.get_or_create(
+            ordre_de_travail=ordre_travail,
+            defaults={
+                'statut_rapport': 'BROUILLON',
+                'cree_par': request.user,
+                'date_execution_debut': timezone.now()
+            }
+        )
+        
+        # Créer la réponse si elle n'existe pas
+        reponse, created = Reponse.objects.get_or_create(
+            rapport_execution=rapport,
+            point_de_controle=point,
+            defaults={
+                'valeur': 'Média ajouté',
+                'est_conforme': True
+            }
+        )
+        
+        # Créer le média
+        media = FichierMedia.objects.create(
+            reponse=reponse,
+            fichier=fichier,
+            nom_original=fichier.name,
+            type_fichier=type_fichier.upper(),
+            taille_octets=fichier.size,
+            uploade_par=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Fichier uploadé avec succès',
+            'media': {
+                'id': media.id,
+                'nom_original': media.nom_original,
+                'type_fichier': media.type_fichier,
+                'fichier_url': media.fichier.url,
+                'point_id': point.id,
+                'taille_octets': media.taille_octets
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur upload: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_media_ajax(request, media_id):
+    """
+    Suppression d'un média via AJAX
+    """
+    try:
+        media = get_object_or_404(FichierMedia, pk=media_id)
+        
+        # Vérifier permissions
+        ordre_travail = media.reponse.rapport_execution.ordre_de_travail
+        user_role = get_user_role(request.user)
+        peut_supprimer = (
+            ordre_travail.assigne_a_technicien == request.user or
+            (ordre_travail.assigne_a_equipe and request.user in ordre_travail.assigne_a_equipe.membres.all()) or
+            media.uploade_par == request.user or
+            user_role in ['MANAGER', 'ADMIN']
+        )
+        
+        if not peut_supprimer:
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission refusée'
+            }, status=403)
+        
+        # Supprimer le fichier physique
+        if media.fichier:
+            try:
+                media.fichier.delete(save=False)
+            except:
+                pass  # Ignorer les erreurs de suppression de fichier
+        
+        # Supprimer l'enregistrement
+        media.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Média supprimé'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur suppression: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_medias_intervention(request, pk):
+    """
+    Récupération de tous les médias pour une intervention
+    """
+    try:
+        ordre_travail = get_object_or_404(OrdreDeTravail, pk=pk)
+        
+        # Vérifier permissions
+        user_role = get_user_role(request.user)
+        peut_voir = (
+            ordre_travail.assigne_a_technicien == request.user or
+            (ordre_travail.assigne_a_equipe and request.user in ordre_travail.assigne_a_equipe.membres.all()) or
+            user_role in ['MANAGER', 'ADMIN']
+        )
+        
+        if not peut_voir:
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission refusée'
+            }, status=403)
+        
+        try:
+            rapport = RapportExecution.objects.get(ordre_de_travail=ordre_travail)
+            medias = FichierMedia.objects.filter(
+                reponse__rapport_execution=rapport
+            ).select_related('reponse__point_de_controle')
+            
+            medias_data = []
+            for media in medias:
+                medias_data.append({
+                    'id': media.id,
+                    'nom_original': media.nom_original,
+                    'type_fichier': media.type_fichier,
+                    'fichier_url': media.fichier.url,
+                    'point_id': media.reponse.point_de_controle.id,
+                    'taille_octets': media.taille_octets,
+                    'date_upload': media.date_upload.isoformat()
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'medias': medias_data
+            })
+            
+        except RapportExecution.DoesNotExist:
+            return JsonResponse({
+                'success': True,
+                'medias': []
+            })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        }, status=500)
+
+

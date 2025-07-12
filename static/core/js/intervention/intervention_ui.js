@@ -1,4 +1,4 @@
-// static/js/intervention/intervention_ui.js
+// static/core/js/intervention/intervention_ui.js
 // Gestionnaire de l'interface utilisateur pour l'exécution d'intervention
 
 class InterventionUI {
@@ -7,6 +7,7 @@ class InterventionUI {
         this.autoSaveInterval = 30000; // 30 secondes
         this.ordreTravailiId = null;
         this.csrfToken = null;
+        this.isDirty = false;
         
         this.init();
     }
@@ -23,6 +24,7 @@ class InterventionUI {
         this.initializeCollapses();
         this.setupAutoSave();
         this.loadPersistedData();
+        this.updateProgress();
     }
     
     setupEventListeners() {
@@ -31,25 +33,37 @@ class InterventionUI {
         
         formInputs.forEach(input => {
             input.addEventListener('change', () => {
+                this.isDirty = true;
                 this.triggerAutoSave();
+                this.updateProgress();
             });
             input.addEventListener('input', () => {
+                this.isDirty = true;
                 this.triggerAutoSave();
             });
         });
         
         // Validation avant finalisation
-        const finaliseButton = document.querySelector('button[value="finaliser_intervention"]');
+        const finaliseButton = document.querySelector('button[onclick="showConfirmModal()"]');
         if (finaliseButton) {
             finaliseButton.addEventListener('click', (e) => {
                 if (!this.validateRequiredFields()) {
                     e.preventDefault();
+                    e.stopPropagation();
+                    return false;
                 }
             });
         }
         
         // Drag & Drop pour les fichiers
         this.setupDragAndDrop();
+        
+        // Gestionnaire pour fermer les modals avec Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeAllModals();
+            }
+        });
     }
     
     // ========================================
@@ -57,15 +71,11 @@ class InterventionUI {
     // ========================================
     
     initializeCollapses() {
-        // Tous fermés par défaut
-        document.querySelectorAll('[id^="operation-"]').forEach(element => {
-            if (element.id.includes('operation-')) {
-                element.style.display = 'none';
-                const chevronId = 'chevron-' + element.id;
-                const chevron = document.getElementById(chevronId);
-                if (chevron) {
-                    chevron.classList.add('rotate-180');
-                }
+        // Auto-collapse des opérations sauf la première
+        const operations = document.querySelectorAll('[id^="operation-content-"]');
+        operations.forEach((op, index) => {
+            if (index > 0) {
+                this.collapseElement(op.id);
             }
         });
     }
@@ -74,357 +84,163 @@ class InterventionUI {
         const element = document.getElementById(elementId);
         const chevron = document.getElementById('chevron-' + elementId);
         
-        if (!element) return;
-        
-        if (element.style.display === 'none') {
-            element.style.display = 'block';
-            if (chevron) {
-                chevron.classList.remove('rotate-180');
-            }
-        } else {
-            element.style.display = 'none';
-            if (chevron) {
-                chevron.classList.add('rotate-180');
+        if (element && chevron) {
+            const isHidden = element.style.display === 'none' || element.classList.contains('hidden');
+            
+            if (isHidden) {
+                this.expandElement(elementId);
+            } else {
+                this.collapseElement(elementId);
             }
         }
     }
     
+    expandElement(elementId) {
+        const element = document.getElementById(elementId);
+        const chevron = document.getElementById('chevron-' + elementId);
+        
+        if (element) {
+            element.style.display = 'block';
+            element.classList.remove('hidden');
+        }
+        if (chevron) {
+            chevron.style.transform = 'rotate(180deg)';
+        }
+    }
+    
+    collapseElement(elementId) {
+        const element = document.getElementById(elementId);
+        const chevron = document.getElementById('chevron-' + elementId);
+        
+        if (element) {
+            element.style.display = 'none';
+            element.classList.add('hidden');
+        }
+        if (chevron) {
+            chevron.style.transform = 'rotate(0deg)';
+        }
+    }
+    
     // ========================================
-    // SAUVEGARDE AUTOMATIQUE
+    // AUTO-SAVE
     // ========================================
     
     setupAutoSave() {
-        // Sauvegarde avant fermeture de la page
-        window.addEventListener('beforeunload', () => {
-            this.saveDraft();
-        });
+        // Démarrer l'auto-save si configuré
+        if (this.autoSaveInterval > 0) {
+            this.triggerAutoSave();
+        }
     }
     
     triggerAutoSave() {
-        clearTimeout(this.autoSaveTimer);
-        this.autoSaveTimer = setTimeout(() => {
-            this.saveDraft();
-        }, 2000); // 2 secondes après la dernière modification
-    }
-    
-    saveDraft() {
-        const formData = new FormData(document.getElementById('execution-form'));
-        const draftData = {};
-        
-        // Extraire seulement les données des points de contrôle
-        for (let [key, value] of formData.entries()) {
-            if (key.startsWith('point_')) {
-                draftData[key] = value;
-            }
+        // Annuler le timer précédent
+        if (this.autoSaveTimer) {
+            clearTimeout(this.autoSaveTimer);
         }
         
-        this.showSaveIndicator();
+        // Programmer la sauvegarde
+        this.autoSaveTimer = setTimeout(() => {
+            this.performAutoSave();
+        }, this.autoSaveInterval);
+    }
+    
+    performAutoSave() {
+        if (!this.isDirty || !this.ordreTravailiId) {
+            return;
+        }
         
-        fetch(`/ordres-travail/${this.ordreTravailiId}/save-draft/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': this.csrfToken,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(draftData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                this.hideSaveIndicator();
-                // Sauvegarder également en local pour persistance
-                localStorage.setItem(`draft_${this.ordreTravailiId}`, JSON.stringify(draftData));
-            }
-        })
-        .catch(error => {
-            console.error('Erreur sauvegarde brouillon:', error);
-        });
+        const formData = this.collectFormData();
+        
+        // Sauvegarder localement
+        this.saveToLocalStorage(formData);
+        
+        // Optionnel: sauvegarder sur le serveur
+        this.saveToServer(formData);
+    }
+    
+    collectFormData() {
+        const form = document.getElementById('execution-form');
+        if (!form) return {};
+        
+        const formData = new FormData(form);
+        const data = {};
+        
+        for (let [key, value] of formData.entries()) {
+            data[key] = value;
+        }
+        
+        return data;
+    }
+    
+    saveToLocalStorage(data) {
+        try {
+            const storageKey = `intervention_draft_${this.ordreTravailiId}`;
+            const storageData = {
+                data: data,
+                timestamp: new Date().toISOString(),
+                progress: this.calculateProgress()
+            };
+            localStorage.setItem(storageKey, JSON.stringify(storageData));
+        } catch (e) {
+            console.warn('Impossible de sauvegarder en local:', e);
+        }
     }
     
     loadPersistedData() {
-        // Charger les données de brouillon depuis le serveur
-        fetch(`/ordres-travail/${this.ordreTravailiId}/load-draft/`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.draft) {
-                    this.populateForm(data.draft);
+        try {
+            const storageKey = `intervention_draft_${this.ordreTravailiId}`;
+            const savedData = localStorage.getItem(storageKey);
+            
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                this.restoreFormData(parsedData.data);
+                this.updateProgress();
+            }
+        } catch (e) {
+            console.warn('Impossible de charger les données sauvegardées:', e);
+        }
+    }
+    
+    restoreFormData(data) {
+        if (!data) return;
+        
+        Object.keys(data).forEach(key => {
+            const field = document.querySelector(`[name="${key}"]`);
+            if (field) {
+                if (field.type === 'checkbox') {
+                    field.checked = !!data[key];
                 } else {
-                    // Fallback vers le localStorage
-                    const localDraft = localStorage.getItem(`draft_${this.ordreTravailiId}`);
-                    if (localDraft) {
-                        try {
-                            const draftData = JSON.parse(localDraft);
-                            this.populateForm(draftData);
-                        } catch (e) {
-                            console.error('Erreur parsing brouillon local:', e);
-                        }
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Erreur chargement brouillon:', error);
-            });
-    }
-    
-    populateForm(draftData) {
-        Object.keys(draftData).forEach(key => {
-            const element = document.querySelector(`[name="${key}"]`);
-            if (element) {
-                if (element.type === 'checkbox') {
-                    element.checked = draftData[key];
-                } else {
-                    element.value = draftData[key];
+                    field.value = data[key];
                 }
             }
         });
     }
     
-    // ========================================
-    // VALIDATION
-    // ========================================
-    
-    validateRequiredFields() {
-        const requiredFields = document.querySelectorAll('input[name^="point_"], select[name^="point_"], textarea[name^="point_"]');
-        let hasError = false;
-        let firstErrorField = null;
+    saveToServer(data) {
+        const metaData = document.getElementById('intervention-meta-data');
+        const saveUrl = metaData?.dataset?.autoSaveUrl;
         
-        requiredFields.forEach(field => {
-            const label = field.closest('.border-l-4')?.querySelector('label');
-            if (label && label.textContent.includes('*') && !field.value.trim()) {
-                hasError = true;
-                field.style.borderColor = '#ef4444';
-                field.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
-                
-                if (!firstErrorField) {
-                    firstErrorField = field;
-                }
-            } else {
-                field.style.borderColor = '';
-                field.style.boxShadow = '';
-            }
-        });
+        if (!saveUrl) return;
         
-        if (hasError) {
-            this.showError('Veuillez remplir tous les champs obligatoires avant de finaliser l\'intervention.');
-            
-            // Scroll vers le premier champ en erreur
-            if (firstErrorField) {
-                firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                firstErrorField.focus();
-            }
-            
-            return false;
-        }
-        
-        return true;
-    }
-    
-    // ========================================
-    // DRAG & DROP
-    // ========================================
-    
-    setupDragAndDrop() {
-        document.querySelectorAll('[id^="drop-zone-"]').forEach(dropZone => {
-            const pointId = dropZone.id.replace('drop-zone-', '');
-            
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('dragover');
-            });
-            
-            dropZone.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-            });
-            
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-                
-                const files = Array.from(e.dataTransfer.files);
-                files.forEach(file => {
-                    if (window.mediaManager) {
-                        window.mediaManager.uploadMedia(file, pointId, 'DOCUMENT', file.name);
-                    }
-                });
-            });
-        });
-    }
-    
-    // ========================================
-    // INDICATEURS VISUELS
-    // ========================================
-    
-    showSaveIndicator() {
-        const indicator = document.getElementById('save-indicator');
-        if (indicator) {
-            indicator.classList.remove('hidden');
-        } else {
-            // Créer l'indicateur s'il n'existe pas
-            const newIndicator = document.createElement('div');
-            newIndicator.id = 'save-indicator';
-            newIndicator.className = 'fixed top-4 right-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg shadow-lg z-50 flex items-center space-x-2';
-            newIndicator.innerHTML = `
-                <i class="fas fa-save text-yellow-600"></i>
-                <span class="text-sm font-medium">Sauvegarde automatique...</span>
-                <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-            `;
-            document.body.appendChild(newIndicator);
-        }
-    }
-    
-    hideSaveIndicator() {
-        const indicator = document.getElementById('save-indicator');
-        if (indicator) {
-            setTimeout(() => {
-                indicator.classList.add('hidden');
-            }, 2000);
-        }
-    }
-    
-    showOfflineIndicator() {
-        const indicator = document.getElementById('offline-indicator');
-        if (indicator) {
-            indicator.classList.remove('hidden');
-        } else {
-            const newIndicator = document.createElement('div');
-            newIndicator.id = 'offline-indicator';
-            newIndicator.className = 'fixed top-16 right-4 bg-red-100 border border-red-400 text-red-800 px-4 py-2 rounded-lg shadow-lg z-50 flex items-center space-x-2';
-            newIndicator.innerHTML = `
-                <i class="fas fa-wifi-slash text-red-600"></i>
-                <span class="text-sm font-medium">Mode hors ligne</span>
-            `;
-            document.body.appendChild(newIndicator);
-        }
-    }
-    
-    hideOfflineIndicator() {
-        const indicator = document.getElementById('offline-indicator');
-        if (indicator) {
-            indicator.classList.add('hidden');
-        }
-    }
-    
-    // ========================================
-    // GESTION HORS LIGNE
-    // ========================================
-    
-    setupOfflineDetection() {
-        window.addEventListener('online', () => {
-            this.hideOfflineIndicator();
-            this.syncOfflineData();
-        });
-        
-        window.addEventListener('offline', () => {
-            this.showOfflineIndicator();
-        });
-        
-        // Vérification initiale
-        if (!navigator.onLine) {
-            this.showOfflineIndicator();
-        }
-    }
-    
-    syncOfflineData() {
-        // Synchroniser les données sauvegardées hors ligne
-        const offlineData = localStorage.getItem(`offline_data_${this.ordreTravailiId}`);
-        if (offlineData) {
-            try {
-                const data = JSON.parse(offlineData);
-                // Envoyer les données au serveur
-                this.sendOfflineDataToServer(data);
-                localStorage.removeItem(`offline_data_${this.ordreTravailiId}`);
-            } catch (e) {
-                console.error('Erreur sync données hors ligne:', e);
-            }
-        }
-    }
-    
-    sendOfflineDataToServer(data) {
-        fetch('/ajax/sync-offline/', {
+        fetch(saveUrl, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': this.csrfToken,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                offline_data: data,
-                ordre_travail_id: this.ordreTravailiId
-            })
+            body: JSON.stringify(data)
         })
         .then(response => response.json())
         .then(result => {
             if (result.success) {
-                this.showSuccess('Données synchronisées avec succès');
+                this.showConnectionStatus('online');
+                this.isDirty = false;
             }
         })
         .catch(error => {
-            console.error('Erreur synchronisation:', error);
+            console.warn('Erreur sauvegarde serveur:', error);
+            this.showConnectionStatus('offline');
         });
-    }
-    
-    // ========================================
-    // MESSAGES
-    // ========================================
-    
-    showSuccess(message) {
-        this.showMessage(message, 'success');
-    }
-    
-    showError(message) {
-        this.showMessage(message, 'error');
-    }
-    
-    showInfo(message) {
-        this.showMessage(message, 'info');
-    }
-    
-    showMessage(message, type = 'info') {
-        const messageDiv = document.createElement('div');
-        
-        let bgColor, textColor, icon;
-        switch (type) {
-            case 'success':
-                bgColor = 'bg-green-500';
-                textColor = 'text-white';
-                icon = 'fa-check-circle';
-                break;
-            case 'error':
-                bgColor = 'bg-red-500';
-                textColor = 'text-white';
-                icon = 'fa-exclamation-circle';
-                break;
-            case 'info':
-            default:
-                bgColor = 'bg-blue-500';
-                textColor = 'text-white';
-                icon = 'fa-info-circle';
-                break;
-        }
-        
-        messageDiv.className = `fixed top-4 left-1/2 transform -translate-x-1/2 ${bgColor} ${textColor} px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2 min-w-96`;
-        messageDiv.innerHTML = `
-            <i class="fas ${icon}"></i>
-            <span class="font-medium">${message}</span>
-        `;
-        
-        document.body.appendChild(messageDiv);
-        
-        // Animation d'entrée
-        setTimeout(() => {
-            messageDiv.style.transform = 'translateX(-50%) translateY(0)';
-        }, 10);
-        
-        // Suppression automatique
-        setTimeout(() => {
-            messageDiv.style.opacity = '0';
-            messageDiv.style.transform = 'translateX(-50%) translateY(-20px)';
-            setTimeout(() => {
-                if (messageDiv.parentNode) {
-                    messageDiv.parentNode.removeChild(messageDiv);
-                }
-            }, 300);
-        }, 4000);
     }
     
     // ========================================
@@ -432,54 +248,222 @@ class InterventionUI {
     // ========================================
     
     updateProgress() {
-        const totalPoints = document.querySelectorAll('[data-point-id]').length;
-        let completedPoints = 0;
+        const progress = this.calculateProgress();
+        this.displayProgress(progress);
+    }
+    
+    calculateProgress() {
+        const allFields = document.querySelectorAll('[data-point-id]');
+        let totalFields = 0;
+        let completedFields = 0;
         
-        document.querySelectorAll('[data-point-id]').forEach(element => {
-            const pointId = element.getAttribute('data-point-id');
-            const value = element.value || element.checked;
-            const validation = document.getElementById('validation-' + pointId);
-            
-            if (value && value.toString().trim() !== '') {
-                completedPoints++;
-                if (validation) {
-                    validation.classList.remove('border-gray-300');
-                    validation.classList.add('border-green-500', 'bg-green-50');
-                    const icon = validation.querySelector('i');
-                    if (icon) {
-                        icon.classList.remove('hidden');
-                    }
+        allFields.forEach(container => {
+            const inputs = container.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                totalFields++;
+                if (this.isFieldCompleted(input)) {
+                    completedFields++;
                 }
+            });
+        });
+        
+        return {
+            total: totalFields,
+            completed: completedFields,
+            percentage: totalFields > 0 ? (completedFields / totalFields) * 100 : 0
+        };
+    }
+    
+    isFieldCompleted(field) {
+        if (field.type === 'checkbox') {
+            return true; // Les checkboxes sont toujours considérées comme complétées
+        }
+        
+        const value = field.value?.trim();
+        return value && value !== '';
+    }
+    
+    displayProgress(progress) {
+        // Barre de progression
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const completionStatus = document.getElementById('completion-status');
+        
+        if (progressBar) {
+            progressBar.style.width = progress.percentage + '%';
+        }
+        
+        if (progressText) {
+            progressText.textContent = Math.round(progress.percentage) + '%';
+        }
+        
+        if (completionStatus) {
+            completionStatus.textContent = `${progress.completed} sur ${progress.total} points complétés`;
+        }
+    }
+    
+    // ========================================
+    // VALIDATION
+    // ========================================
+    
+    validateRequiredFields() {
+        const requiredFields = document.querySelectorAll('[required]');
+        const errors = [];
+        
+        requiredFields.forEach(field => {
+            if (!this.isFieldValid(field)) {
+                const label = this.getFieldLabel(field);
+                errors.push(label || 'Champ requis');
+                this.highlightFieldError(field);
             } else {
-                if (validation) {
-                    validation.classList.remove('border-green-500', 'bg-green-50');
-                    validation.classList.add('border-gray-300');
-                    const icon = validation.querySelector('i');
-                    if (icon) {
-                        icon.classList.add('hidden');
-                    }
-                }
+                this.clearFieldError(field);
             }
         });
         
-        const percentage = totalPoints > 0 ? (completedPoints / totalPoints) * 100 : 0;
-        
-        // Mise à jour de la barre de progression principale
-        const progressBar = document.getElementById('progress-bar');
-        const progressPercentage = document.getElementById('progress-percentage');
-        
-        if (progressBar) {
-            progressBar.style.width = percentage + '%';
-        }
-        if (progressPercentage) {
-            progressPercentage.textContent = Math.round(percentage) + '%';
+        if (errors.length > 0) {
+            this.showValidationErrors(errors);
+            return false;
         }
         
-        // Mise à jour du statut de completion
-        const completionStatus = document.getElementById('completion-status');
-        if (completionStatus) {
-            completionStatus.textContent = `${completedPoints} sur ${totalPoints} points complétés`;
+        return true;
+    }
+    
+    isFieldValid(field) {
+        if (field.type === 'checkbox') {
+            return true; // Les checkboxes requises sont gérées différemment
         }
+        
+        const value = field.value?.trim();
+        return value && value !== '';
+    }
+    
+    getFieldLabel(field) {
+        const container = field.closest('[data-point-id]');
+        if (container) {
+            const label = container.querySelector('label');
+            return label?.textContent?.replace('*', '').trim();
+        }
+        return null;
+    }
+    
+    highlightFieldError(field) {
+        field.classList.add('border-red-500', 'bg-red-50');
+    }
+    
+    clearFieldError(field) {
+        field.classList.remove('border-red-500', 'bg-red-50');
+    }
+    
+    showValidationErrors(errors) {
+        const message = `Veuillez remplir les champs requis :\n• ${errors.join('\n• ')}`;
+        this.showToast(message, 'error');
+    }
+    
+    // ========================================
+    // DRAG & DROP
+    // ========================================
+    
+    setupDragAndDrop() {
+        const form = document.getElementById('execution-form');
+        if (!form) return;
+        
+        form.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            form.classList.add('drag-over');
+        });
+        
+        form.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            form.classList.remove('drag-over');
+        });
+        
+        form.addEventListener('drop', (e) => {
+            e.preventDefault();
+            form.classList.remove('drag-over');
+            
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0) {
+                this.handleDroppedFiles(files, e.target);
+            }
+        });
+    }
+    
+    handleDroppedFiles(files, target) {
+        // Trouver le point de contrôle le plus proche
+        const pointContainer = target.closest('[data-point-id]');
+        if (pointContainer) {
+            const pointId = pointContainer.dataset.pointId;
+            if (window.mediaManager && window.mediaManager.handleFileUpload) {
+                files.forEach(file => {
+                    window.mediaManager.processDroppedFile(file, pointId);
+                });
+            }
+        }
+    }
+    
+    // ========================================
+    // STATUT DE CONNEXION
+    // ========================================
+    
+    showConnectionStatus(status) {
+        const statusElement = document.getElementById('connection-status');
+        if (!statusElement) return;
+        
+        statusElement.classList.remove('bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+        
+        const statusText = statusElement.querySelector('span');
+        const statusDot = statusElement.querySelector('div');
+        
+        if (status === 'online') {
+            statusElement.classList.add('bg-green-100', 'text-green-800');
+            if (statusText) statusText.textContent = 'En ligne';
+            if (statusDot) statusDot.classList.add('animate-pulse');
+        } else {
+            statusElement.classList.add('bg-red-100', 'text-red-800');
+            if (statusText) statusText.textContent = 'Hors ligne';
+            if (statusDot) statusDot.classList.remove('animate-pulse');
+        }
+    }
+    
+    // ========================================
+    // MODALS
+    // ========================================
+    
+    closeAllModals() {
+        const modals = document.querySelectorAll('[id$="-modal"]');
+        modals.forEach(modal => {
+            modal.classList.add('hidden');
+        });
+    }
+    
+    // ========================================
+    // NOTIFICATIONS
+    // ========================================
+    
+    showToast(message, type = 'info') {
+        // Utiliser la fonction globale showToast si disponible
+        if (window.showToast) {
+            window.showToast(message, type);
+            return;
+        }
+        
+        // Fallback simple
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transform transition-all duration-300`;
+        
+        const colors = {
+            'success': 'bg-green-500 text-white',
+            'error': 'bg-red-500 text-white',
+            'info': 'bg-blue-500 text-white',
+            'warning': 'bg-yellow-500 text-white'
+        };
+        
+        toast.className += ' ' + (colors[type] || colors['info']);
+        toast.innerHTML = `<div class="flex items-center"><span>${message}</span></div>`;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.remove(), 5000);
     }
     
     // ========================================
@@ -490,32 +474,56 @@ class InterventionUI {
         if (this.autoSaveTimer) {
             clearTimeout(this.autoSaveTimer);
         }
+        
+        // Sauvegarder une dernière fois si nécessaire
+        if (this.isDirty) {
+            this.performAutoSave();
+        }
     }
 }
 
-// Initialiser l'interface utilisateur
+// ========================================
+// INITIALISATION ET FONCTIONS GLOBALES
+// ========================================
+
+// Instance globale
 let interventionUI;
 
+// Initialisation
 document.addEventListener('DOMContentLoaded', function() {
     interventionUI = new InterventionUI();
 });
 
 // Fonctions globales pour compatibilité avec le template
-function toggleCollapse(elementId) {
+window.toggleCollapse = function(elementId) {
     if (interventionUI) {
         interventionUI.toggleCollapse(elementId);
     }
-}
+};
 
-function updateProgress() {
+window.updateProgress = function() {
     if (interventionUI) {
         interventionUI.updateProgress();
     }
-}
+};
+
+window.validateForm = function() {
+    if (interventionUI) {
+        return interventionUI.validateRequiredFields();
+    }
+    return true;
+};
 
 // Nettoyage lors de la fermeture de la page
-window.addEventListener('beforeunload', function() {
+window.addEventListener('beforeunload', function(e) {
     if (interventionUI) {
         interventionUI.destroy();
+        
+        // Avertir si des modifications non sauvegardées
+        if (interventionUI.isDirty) {
+            e.preventDefault();
+            e.returnValue = 'Des modifications non sauvegardées pourraient être perdues.';
+            return e.returnValue;
+        }
     }
 });

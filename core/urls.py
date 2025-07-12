@@ -158,7 +158,15 @@ urlpatterns = [
     path('api/notifications/', views.get_notifications_utilisateur, name='get_notifications'),
     path('api/statistiques-dashboard/', views.get_statistiques_dashboard, name='statistiques_dashboard'),
     path('api/recherche-globale/', views.recherche_globale, name='recherche_globale'),
+    path('save-draft/<int:ordre_id>/', views.save_draft_intervention, name='save_draft_intervention'),
+    path('ordres-travail/<int:pk>/save-draft/', views.save_draft_intervention, name='save_draft_intervention'),
+    path('ordres-travail/<int:pk>/load-draft/', views.load_draft_intervention, name='load_draft_intervention'),
+    path('ordres-travail/<int:pk>/medias/', views.get_medias_intervention, name='get_medias_intervention'),
+    path('upload-media-ajax/', views.upload_media_ajax, name='upload_media_ajax'),
+    path('media/<int:media_id>/delete/', views.delete_media_ajax, name='delete_media_ajax'),
 ]
+
+
 
 # Servir les fichiers media en développement
 if settings.DEBUG:
