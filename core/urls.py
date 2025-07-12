@@ -170,6 +170,11 @@ urlpatterns = [
     path('ajax/get-medias-point/<int:point_id>/', views.get_medias_point, name='get_medias_point'),
     path('ajax/delete-media-complete/<int:media_id>/', views.delete_media_complete, name='delete_media_complete'),
 
+   # Carte FTTH
+    path('carte/', views.carte_ftth, name='carte_ftth'),
+    path('api/assets/<int:asset_id>/details/', views.asset_details_ajax, name='asset_details_ajax'),
+    path('api/assets/search/', views.recherche_assets_ajax, name='recherche_assets_ajax'),
+
 ]
 
 

@@ -1,0 +1,512 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Carte FTTH - Assets{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+
+<style>
+#map {
+    height: calc(100vh - 64px);
+    width: 100%;
+}
+
+.sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 350px;
+    height: 100%;
+    background: white;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+.sidebar.open {
+    transform: translateX(0);
+}
+
+.leaflet-popup-content {
+    max-width: 300px;
+}
+
+.asset-marker {
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.asset-en-service { background-color: #10b981; }
+.asset-en-panne { background-color: #ef4444; }
+.asset-en-maintenance { background-color: #f59e0b; }
+.asset-hors-service { background-color: #6b7280; }
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1001;
+}
+
+.search-result-item {
+    padding: 12px;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+}
+
+.search-result-item:hover {
+    background-color: #f9fafb;
+}
+
+.stats-panel {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+    min-width: 200px;
+}
+
+.legend {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-right: 8px;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="relative">
+    <!-- Barre d'outils -->
+    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1001] flex space-x-2">
+        <!-- Recherche -->
+        <div class="relative">
+            <input type="text" 
+                   id="search-input"
+                   placeholder="Rechercher un asset..."
+                   class="w-80 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div id="search-results" class="search-results hidden"></div>
+        </div>
+        
+        <!-- Boutons d'outils -->
+        <button onclick="toggleSidebar()" 
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
+            <i class="fas fa-info-circle mr-2"></i>Infos
+        </button>
+        
+        <button onclick="toggleFullscreen()" 
+                class="px-4 py-2 bg-gray-600 text-white rounded-lg shadow-lg hover:bg-gray-700">
+            <i class="fas fa-expand mr-2"></i>Plein écran
+        </button>
+    </div>
+
+    <!-- Panneau statistiques -->
+    <div class="stats-panel">
+        <h3 class="font-bold text-gray-800 mb-2">
+            <i class="fas fa-chart-bar mr-2 text-blue-600"></i>
+            Statistiques
+        </h3>
+        <div class="space-y-1 text-sm">
+            <div class="flex justify-between">
+                <span>Total assets:</span>
+                <span class="font-semibold">{{ stats.total_assets }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>En service:</span>
+                <span class="font-semibold text-green-600">{{ stats.en_service }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>En panne:</span>
+                <span class="font-semibold text-red-600">{{ stats.en_panne }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Maintenance:</span>
+                <span class="font-semibold text-yellow-600">{{ stats.en_maintenance }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Légende -->
+    <div class="legend">
+        <h4 class="font-bold text-gray-800 mb-3">
+            <i class="fas fa-map-marker-alt mr-2 text-blue-600"></i>
+            Statuts
+        </h4>
+        <div class="space-y-2">
+            <div class="legend-item">
+                <div class="legend-color asset-en-service"></div>
+                <span class="text-sm">En service</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color asset-en-panne"></div>
+                <span class="text-sm">En panne</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color asset-en-maintenance"></div>
+                <span class="text-sm">Maintenance</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color asset-hors-service"></div>
+                <span class="text-sm">Hors service</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carte -->
+    <div id="map"></div>
+
+    <!-- Sidebar détails -->
+    <div id="sidebar" class="sidebar">
+        <div class="p-6 h-full overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">Détails Asset</h2>
+                <button onclick="closeSidebar()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="sidebar-content">
+                <p class="text-gray-500">Sélectionnez un asset sur la carte pour voir ses détails.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+<script>
+let map;
+let assetsLayer;
+let currentAsset = null;
+
+// Données des assets depuis Django
+const assetsData = {{ assets_geojson|safe }};
+
+// Initialisation de la carte
+function initMap() {
+    // Créer la carte
+    map = L.map('map').setView([{{ center_lat }}, {{ center_lng }}], 10);
+
+    // Ajouter la couche de tuiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Ajouter les contrôles de dessin
+    const drawControl = new L.Control.Draw({
+        position: 'topleft',
+        draw: {
+            polyline: {
+                shapeOptions: {
+                    color: '#f357a1',
+                    weight: 4
+                }
+            },
+            polygon: {
+                allowIntersection: false,
+                shapeOptions: {
+                    color: '#bada55'
+                }
+            },
+            circle: false,
+            rectangle: {
+                shapeOptions: {
+                    clickable: false
+                }
+            },
+            marker: true
+        },
+        edit: {
+            featureGroup: false
+        }
+    });
+    map.addControl(drawControl);
+
+    // Ajouter les assets
+    addAssetsToMap();
+
+    // Événements de dessin
+    map.on(L.Draw.Event.CREATED, function (e) {
+        const layer = e.layer;
+        console.log('Nouvelle géométrie créée:', layer.toGeoJSON());
+        // Ici on pourra sauvegarder en base
+    });
+}
+
+// Ajouter les assets sur la carte
+function addAssetsToMap() {
+    assetsLayer = L.geoJSON(assetsData, {
+        pointToLayer: function(feature, latlng) {
+            const props = feature.properties;
+            const statut = props.statut.toLowerCase().replace(/\s+/g, '_');
+            
+            return L.circleMarker(latlng, {
+                radius: 8,
+                fillColor: getStatusColor(statut),
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8,
+                className: `asset-marker asset-${statut}`
+            });
+        },
+        onEachFeature: function(feature, layer) {
+            const props = feature.properties;
+            
+            // Popup basique
+            const popupContent = `
+                <div class="asset-popup">
+                    <h3 class="font-bold text-lg mb-2">${props.nom}</h3>
+                    ${props.reference ? `<p><strong>Ref:</strong> ${props.reference}</p>` : ''}
+                    <p><strong>Catégorie:</strong> ${props.categorie}</p>
+                    <p><strong>Statut:</strong> <span class="px-2 py-1 rounded text-sm bg-gray-100">${props.statut}</span></p>
+                    ${props.adresse ? `<p><strong>Adresse:</strong> ${props.adresse}</p>` : ''}
+                    <div class="mt-3 flex space-x-2">
+                        <button onclick="showAssetDetails(${props.id})" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                            Détails
+                        </button>
+                        <button onclick="centerOnAsset(${feature.geometry.coordinates[1]}, ${feature.geometry.coordinates[0]})" class="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700">
+                            Centrer
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            layer.bindPopup(popupContent, { maxWidth: 300 });
+            
+            // Événement clic
+            layer.on('click', function() {
+                currentAsset = props.id;
+                showAssetDetails(props.id);
+            });
+        }
+    }).addTo(map);
+}
+
+// Couleurs selon le statut
+function getStatusColor(statut) {
+    const colors = {
+        'en_service': '#10b981',
+        'en_panne': '#ef4444', 
+        'en_maintenance': '#f59e0b',
+        'hors_service': '#6b7280'
+    };
+    return colors[statut] || '#6b7280';
+}
+
+// Afficher les détails d'un asset
+function showAssetDetails(assetId) {
+    fetch(`/api/assets/${assetId}/details/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const asset = data.asset;
+                const content = `
+                    <div class="asset-details">
+                        <div class="mb-4">
+                            ${asset.photo ? `<img src="${asset.photo}" alt="${asset.nom}" class="w-full h-32 object-cover rounded-lg mb-3">` : ''}
+                            <h3 class="text-xl font-bold">${asset.nom}</h3>
+                            ${asset.reference ? `<p class="text-gray-600">${asset.reference}</p>` : ''}
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <h4 class="font-semibold text-gray-800">Informations générales</h4>
+                                <div class="text-sm space-y-1 mt-1">
+                                    <p><strong>Catégorie:</strong> ${asset.categorie || 'Non définie'}</p>
+                                    <p><strong>Statut:</strong> <span class="px-2 py-1 rounded bg-gray-100">${asset.statut}</span></p>
+                                    <p><strong>Criticité:</strong> ${asset.criticite}</p>
+                                    ${asset.adresse ? `<p><strong>Adresse:</strong> ${asset.adresse}</p>` : ''}
+                                </div>
+                            </div>
+                            
+                            ${asset.derniere_maintenance || asset.prochaine_maintenance ? `
+                            <div>
+                                <h4 class="font-semibold text-gray-800">Maintenance</h4>
+                                <div class="text-sm space-y-1 mt-1">
+                                    ${asset.derniere_maintenance ? `<p><strong>Dernière:</strong> ${asset.derniere_maintenance}</p>` : ''}
+                                    ${asset.prochaine_maintenance ? `<p><strong>Prochaine:</strong> ${asset.prochaine_maintenance}</p>` : ''}
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            ${asset.attributs.length > 0 ? `
+                            <div>
+                                <h4 class="font-semibold text-gray-800">Attributs techniques</h4>
+                                <div class="text-sm space-y-1 mt-1">
+                                    ${asset.attributs.map(attr => `<p><strong>${attr.cle}:</strong> ${attr.valeur}</p>`).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            ${asset.derniers_ots.length > 0 ? `
+                            <div>
+                                <h4 class="font-semibold text-gray-800">Dernières interventions</h4>
+                                <div class="text-sm space-y-1 mt-1">
+                                    ${asset.derniers_ots.map(ot => `
+                                        <div class="flex justify-between">
+                                            <span>${ot.titre}</span>
+                                            <span class="text-gray-500">${ot.date}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="mt-6 space-y-2">
+                            <button onclick="editAsset(${asset.id})" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                                <i class="fas fa-edit mr-2"></i>Modifier
+                            </button>
+                            <button onclick="createIntervention(${asset.id})" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">
+                                <i class="fas fa-plus mr-2"></i>Nouvelle intervention
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('sidebar-content').innerHTML = content;
+                openSidebar();
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+        });
+}
+
+// Recherche d'assets
+let searchTimeout;
+document.getElementById('search-input').addEventListener('input', function() {
+    const query = this.value.trim();
+    
+    clearTimeout(searchTimeout);
+    
+    if (query.length < 2) {
+        hideSearchResults();
+        return;
+    }
+    
+    searchTimeout = setTimeout(() => {
+        fetch(`/api/assets/search/?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                showSearchResults(data.results);
+            });
+    }, 300);
+});
+
+function showSearchResults(results) {
+    const container = document.getElementById('search-results');
+    
+    if (results.length === 0) {
+        container.innerHTML = '<div class="search-result-item text-gray-500">Aucun résultat trouvé</div>';
+    } else {
+        container.innerHTML = results.map(result => `
+            <div class="search-result-item" onclick="selectSearchResult(${result.latitude}, ${result.longitude}, ${result.id})">
+                <div class="font-medium">${result.nom}</div>
+                <div class="text-sm text-gray-600">${result.categorie} • ${result.reference || 'Pas de ref'}</div>
+                <div class="text-xs text-gray-500">${result.adresse || 'Adresse non définie'}</div>
+            </div>
+        `).join('');
+    }
+    
+    container.classList.remove('hidden');
+}
+
+function hideSearchResults() {
+    document.getElementById('search-results').classList.add('hidden');
+}
+
+function selectSearchResult(lat, lng, assetId) {
+    map.setView([lat, lng], 16);
+    hideSearchResults();
+    document.getElementById('search-input').value = '';
+    
+    // Ouvrir la popup de l'asset
+    setTimeout(() => {
+        showAssetDetails(assetId);
+    }, 500);
+}
+
+// Gestion sidebar
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('open');
+}
+
+function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+}
+
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+}
+
+// Autres fonctions utilitaires
+function centerOnAsset(lat, lng) {
+    map.setView([lat, lng], 16);
+}
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+function editAsset(assetId) {
+    window.open(`/assets/${assetId}/`, '_blank');
+}
+
+function createIntervention(assetId) {
+    window.open(`/ordres-travail/creer/?asset=${assetId}`, '_blank');
+}
+
+// Fermer la recherche si on clique ailleurs
+document.addEventListener('click', function(e) {
+    if (!document.getElementById('search-input').contains(e.target)) {
+        hideSearchResults();
+    }
+});
+
+// Initialiser la carte au chargement
+document.addEventListener('DOMContentLoaded', initMap);
+</script>
+{% endblock %}

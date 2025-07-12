@@ -52,9 +52,38 @@ class Equipe(models.Model):
     def __str__(self):
         return self.nom
 
+
+
+
 # ==============================================================================
 # AXE 1 : GESTION DES ACTIFS (ASSETS) & LEURS DONNÉES DYNAMIQUES
 # ==============================================================================
+# 3. MODÈLE ZONE GÉOGRAPHIQUE
+class ZoneGeographique(models.Model):
+    """
+    Zones de déploiement FTTH
+    """
+    nom = models.CharField(max_length=100)
+    code_postal = models.CharField(max_length=10)
+    commune = models.CharField(max_length=100)
+    
+    TYPE_ZONE = [
+        ('ZONE_DENSE', 'Zone très dense'),
+        ('ZONE_MOINS_DENSE', 'Zone moins dense'),
+        ('ZONE_RURALE', 'Zone rurale')
+    ]
+    type_zone = models.CharField(max_length=20, choices=TYPE_ZONE)
+    
+    # Géométrie de la zone
+    contour_geojson = models.JSONField(help_text="Contour géographique de la zone")
+    
+    # Statistiques
+    nb_logements_total = models.PositiveIntegerField(default=0)
+    nb_logements_eligibles = models.PositiveIntegerField(default=0)
+    taux_raccordement = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    
+    def __str__(self):
+        return f"{self.nom} ({self.commune})"
 
 class CategorieAsset(models.Model):
     nom = models.CharField(max_length=100, unique=True)
@@ -119,6 +148,40 @@ class Asset(models.Model):
         blank=True,
         help_text="Date prévue de la prochaine maintenance"
     )
+    # NOUVEAUX CHAMPS FTTH
+    zone_geographique = models.ForeignKey(ZoneGeographique, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Capacités techniques
+    nb_fibres_total = models.PositiveIntegerField(null=True, blank=True, help_text="Nombre total de fibres")
+    nb_fibres_utilisees = models.PositiveIntegerField(default=0, help_text="Nombre de fibres utilisées")
+    
+    # Position dans l'infrastructure
+    niveau_hierarchique = models.PositiveIntegerField(default=1, help_text="1=NRO, 2=PM, 3=PB, 4=PTO")
+    
+    # Spécifications techniques
+    TYPE_CONNECTEUR = [
+        ('SC', 'SC'),
+        ('LC', 'LC'), 
+        ('FC', 'FC'),
+        ('ST', 'ST'),
+        ('E2000', 'E2000')
+    ]
+    type_connecteur = models.CharField(max_length=10, choices=TYPE_CONNECTEUR, blank=True)
+    
+    # Géométrie (pour les câbles)
+    geometrie_geojson = models.JSONField(null=True, blank=True, help_text="Géométrie de l'asset (point, ligne, polygone)")
+    
+    @property
+    def taux_occupation(self):
+        """Calcule le taux d'occupation des fibres"""
+        if self.nb_fibres_total and self.nb_fibres_total > 0:
+            return (self.nb_fibres_utilisees / self.nb_fibres_total) * 100
+        return 0
+    
+    @property 
+    def fibres_libres(self):
+        """Nombre de fibres disponibles"""
+        return (self.nb_fibres_total or 0) - self.nb_fibres_utilisees
     
     def __str__(self):
         return f"{self.nom} ({self.reference or 'N/A'})"
@@ -133,6 +196,73 @@ class AttributPersonnaliseAsset(models.Model):
     
     def __str__(self):
         return f"{self.asset.nom} | {self.cle}: {self.valeur}"
+
+# 2. MODÈLE CONNEXION FTTH
+class ConnexionFibre(models.Model):
+    """
+    Relations entre assets FTTH (câbles, connecteurs)
+    """
+    asset_source = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='connexions_sortantes')
+    asset_destination = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='connexions_entrantes')
+    
+    TYPE_CONNEXION = [
+        ('FIBRE', 'Fibre optique'),
+        ('CUIVRE', 'Cuivre'),
+        ('COAXIAL', 'Coaxial'),
+        ('WIRELESS', 'Sans fil')
+    ]
+    type_connexion = models.CharField(max_length=20, choices=TYPE_CONNEXION, default='FIBRE')
+    
+    # Spécifique FTTH
+    numero_fibre = models.PositiveIntegerField(null=True, blank=True, help_text="Numéro de fibre dans le câble")
+    couleur_fibre = models.CharField(max_length=20, blank=True, help_text="Couleur identification fibre")
+    longueur_metres = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    affaiblissement_db = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
+    # Géométrie du tracé
+    trace_geojson = models.JSONField(null=True, blank=True, help_text="Tracé géographique de la connexion")
+    
+    date_creation = models.DateTimeField(auto_now_add=True)
+    actif = models.BooleanField(default=True)
+    
+    class Meta:
+        unique_together = ('asset_source', 'asset_destination', 'numero_fibre')
+    
+    def __str__(self):
+        return f"{self.asset_source} → {self.asset_destination} (Fibre {self.numero_fibre})"
+
+
+# 5. MODÈLE PLAN/SCHÉMA
+class PlanSchema(models.Model):
+    """
+    Plans et schémas techniques
+    """
+    nom = models.CharField(max_length=100)
+    zone_geographique = models.ForeignKey(ZoneGeographique, on_delete=models.CASCADE)
+    
+    TYPE_PLAN = [
+        ('PLAN_MASSE', 'Plan de masse'),
+        ('SCHEMA_SYNOPTIQUE', 'Schéma synoptique'),
+        ('PLAN_DETAIL', 'Plan de détail'),
+        ('SCHEMA_RACCORDEMENT', 'Schéma de raccordement')
+    ]
+    type_plan = models.CharField(max_length=30, choices=TYPE_PLAN)
+    
+    # Fichiers
+    fichier_plan = models.FileField(upload_to='plans_ftth/')
+    fichier_dwg = models.FileField(upload_to='plans_ftth/dwg/', null=True, blank=True)
+    
+    # Géoréférencement
+    emprise_geojson = models.JSONField(null=True, blank=True)
+    
+    # Assets concernés
+    assets_concernes = models.ManyToManyField(Asset, blank=True)
+    
+    date_creation = models.DateTimeField(auto_now_add=True)
+    version = models.CharField(max_length=10, default="1.0")
+    
+    def __str__(self):
+        return f"{self.nom} v{self.version}"
 
 # ==============================================================================
 # AXE 2 : GESTION DES STOCKS & PIÈCES DÉTACHÉES

@@ -3425,3 +3425,196 @@ def _format_file_size(size_bytes):
         i += 1
     
     return f"{size_bytes:.1f} {size_names[i]}"
+
+
+# À ajouter dans core/views.py
+
+@login_required
+def carte_ftth(request):
+    """
+    Interface cartographique FTTH
+    """
+    # Récupérer tous les assets géolocalisés
+    assets = Asset.objects.filter(
+        latitude__isnull=False,
+        longitude__isnull=False
+    ).select_related('categorie').prefetch_related('attributs_perso')
+    
+    # Préparer les données pour la carte
+    assets_geojson = {
+        "type": "FeatureCollection",
+        "features": []
+    }
+    
+    for asset in assets:
+        # Récupérer les attributs personnalisés
+        attributs = {}
+        for attr in asset.attributs_perso.all():
+            attributs[attr.cle] = attr.valeur
+        
+        # Déterminer l'icône selon la catégorie
+        icon_type = "default"
+        if asset.categorie:
+            icon_type = asset.categorie.nom.lower().replace(' ', '_')
+        
+        feature = {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [float(asset.longitude), float(asset.latitude)]
+            },
+            "properties": {
+                "id": asset.id,
+                "nom": asset.nom,
+                "reference": asset.reference or "",
+                "categorie": asset.categorie.nom if asset.categorie else "Non définie",
+                "statut": asset.get_statut_display(),
+                "criticite": asset.get_criticite_display(),
+                "localisation": asset.localisation_texte or "",
+                "adresse": asset.adresse_complete or "",
+                "icon_type": icon_type,
+                "attributs": attributs,
+                "photo": asset.photo_principale.url if asset.photo_principale else None,
+                "derniere_maintenance": asset.derniere_maintenance.isoformat() if asset.derniere_maintenance else None,
+                "prochaine_maintenance": asset.prochaine_maintenance.isoformat() if asset.prochaine_maintenance else None
+            }
+        }
+        assets_geojson["features"].append(feature)
+    
+    # Statistiques
+    stats = {
+        'total_assets': assets.count(),
+        'en_service': assets.filter(statut='EN_SERVICE').count(),
+        'en_panne': assets.filter(statut='EN_PANNE').count(),
+        'en_maintenance': assets.filter(statut='EN_MAINTENANCE').count(),
+        'categories': list(assets.values('categorie__nom').annotate(count=Count('id')).order_by('-count'))
+    }
+    
+    # Centre de la carte (moyenne des positions)
+    if assets.exists():
+        center_lat = assets.aggregate(Avg('latitude'))['latitude__avg']
+        center_lng = assets.aggregate(Avg('longitude'))['longitude__avg']
+    else:
+        center_lat, center_lng = 48.8566, 2.3522  # Paris par défaut
+    
+    context = {
+        'assets_geojson': json.dumps(assets_geojson),
+        'stats': stats,
+        'center_lat': center_lat,
+        'center_lng': center_lng,
+        'categories': CategorieAsset.objects.all()
+    }
+    
+    return render(request, 'core/carte/carte_ftth.html', context)
+
+
+@login_required
+def asset_details_ajax(request, asset_id):
+    """
+    Détails d'un asset via AJAX pour la popup carte
+    """
+    try:
+        asset = get_object_or_404(Asset, pk=asset_id)
+        
+        # Dernières interventions
+        derniers_ots = OrdreDeTravail.objects.filter(
+            asset=asset
+        ).order_by('-date_creation')[:5]
+        
+        # Assets enfants
+        enfants = asset.enfants.all()[:10]
+        
+        # Assets dans un rayon de 100m
+        if asset.latitude and asset.longitude:
+            # Calcul approximatif (1 degré ≈ 111 km)
+            delta = 0.001  # environ 100m
+            assets_proches = Asset.objects.filter(
+                latitude__range=(asset.latitude - delta, asset.latitude + delta),
+                longitude__range=(asset.longitude - delta, asset.longitude + delta)
+            ).exclude(id=asset.id)[:5]
+        else:
+            assets_proches = []
+        
+        data = {
+            'success': True,
+            'asset': {
+                'id': asset.id,
+                'nom': asset.nom,
+                'reference': asset.reference,
+                'categorie': asset.categorie.nom if asset.categorie else None,
+                'statut': asset.get_statut_display(),
+                'criticite': asset.get_criticite_display(),
+                'localisation': asset.localisation_texte,
+                'adresse': asset.adresse_complete,
+                'photo': asset.photo_principale.url if asset.photo_principale else None,
+                'derniere_maintenance': asset.derniere_maintenance.strftime('%d/%m/%Y %H:%M') if asset.derniere_maintenance else None,
+                'prochaine_maintenance': asset.prochaine_maintenance.strftime('%d/%m/%Y %H:%M') if asset.prochaine_maintenance else None,
+                'attributs': list(asset.attributs_perso.values('cle', 'valeur')),
+                'derniers_ots': [
+                    {
+                        'id': ot.id,
+                        'titre': ot.titre,
+                        'statut': ot.statut.nom if ot.statut else 'Non défini',
+                        'date': ot.date_creation.strftime('%d/%m/%Y')
+                    } for ot in derniers_ots
+                ],
+                'enfants': [
+                    {
+                        'id': enfant.id,
+                        'nom': enfant.nom,
+                        'categorie': enfant.categorie.nom if enfant.categorie else None
+                    } for enfant in enfants
+                ],
+                'assets_proches': [
+                    {
+                        'id': proche.id,
+                        'nom': proche.nom,
+                        'distance': '~100m'  # Calcul approximatif
+                    } for proche in assets_proches
+                ]
+            }
+        }
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required 
+def recherche_assets_ajax(request):
+    """
+    Recherche d'assets pour la carte
+    """
+    query = request.GET.get('q', '').strip()
+    
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+    
+    # Recherche dans plusieurs champs
+    assets = Asset.objects.filter(
+        Q(nom__icontains=query) |
+        Q(reference__icontains=query) |
+        Q(localisation_texte__icontains=query) |
+        Q(adresse_complete__icontains=query)
+    ).filter(
+        latitude__isnull=False,
+        longitude__isnull=False
+    )[:10]
+    
+    results = []
+    for asset in assets:
+        results.append({
+            'id': asset.id,
+            'nom': asset.nom,
+            'reference': asset.reference,
+            'categorie': asset.categorie.nom if asset.categorie else 'Non définie',
+            'adresse': asset.adresse_complete or asset.localisation_texte,
+            'latitude': float(asset.latitude),
+            'longitude': float(asset.longitude)
+        })
+    
+    return JsonResponse({'results': results})
