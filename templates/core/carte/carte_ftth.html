@@ -1,7 +1,8 @@
 {% extends 'core/base.html' %}
 {% load static %}
+{% load custom_filters %}
 
-{% block title %}Carte FTTH - Assets{% endblock %}
+{% block title %}Carte FTTH - Interface Avancée{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -10,8 +11,14 @@
     height: 100vh !important;
     width: 100% !important;
     min-height: 600px !important;
+    background-color: #f0f0f0; /* Add this */
+    z-index: 15 !important;
+
 }
 
+#sidebar{
+    z-index: 16;
+}
 .ftth-tool-btn {
     display: flex;
     flex-direction: column;
@@ -41,155 +48,266 @@
 .ftth-tool-btn i {
     font-size: 16px;
 }
+
+/* Animations pour les équipements */
+.ftth-equipment-marker-selected {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Ligne de mesure */
+.distance-line {
+    stroke: #ef4444;
+    stroke-width: 3;
+    stroke-dasharray: 10, 5;
+    animation: dashMove 1s linear infinite;
+}
+
+@keyframes dashMove {
+    to { stroke-dashoffset: -15; }
+}
+
+/* Style for Leaflet Popups */
+.ftth-popup .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    padding: 0; /* Remove default padding */
+}
+
+.ftth-popup .leaflet-popup-content {
+    margin: 0;
+}
+
+.ftth-popup-header {
+    background-color: #f3f4f6;
+    padding: 10px 15px;
+    border-bottom: 1px solid #e5e7eb;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.ftth-popup-content {
+    padding: 15px;
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="w-full h-screen overflow-hidden">
-    <!-- Barre de recherche -->
+<div class="w-full h-screen overflow-hidden relative">
     <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-50">
         <div class="relative">
-            <input type="text" 
+            <input type="text"
                    id="search-input"
                    placeholder="Rechercher un asset..."
-                   class="w-96 px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <div id="search-results" class="absolute top-full left-0 right-0 bg-white border border-gray-300 border-t-0 rounded-b-lg max-h-60 overflow-y-auto z-50 hidden"></div>
+                   class="w-96 px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <div id="search-results" class="absolute top-full left-0 right-0 bg-white border border-gray-300 border-t-0 rounded-b-lg max-h-60 overflow-y-auto z-50 hidden shadow-lg"></div>
         </div>
     </div>
 
-    <!-- Statistiques -->
-    <div class="absolute top-4 left-4 bg-white p-4 rounded-lg shadow-lg z-40 min-w-48">
+    <div class="absolute top-4 left-4 bg-white p-4 rounded-lg shadow-lg z-40 min-w-48 backdrop-blur-sm bg-white/95">
         <h3 class="font-bold text-gray-800 mb-2 flex items-center">
             <i class="fas fa-chart-bar mr-2 text-blue-600"></i>
-            Stats
+            Statistiques FTTH
         </h3>
         <div class="space-y-1 text-sm">
             <div class="flex justify-between">
-                <span>Total:</span>
-                <span class="font-semibold">{{ stats.total_assets|default:0 }}</span>
+                <span>Total équipements:</span>
+                <span class="font-semibold text-blue-600" id="stat-total">{{ stats.total_assets|default:0 }}</span>
             </div>
             <div class="flex justify-between">
-                <span class="text-green-600">Service:</span>
-                <span class="font-semibold">{{ stats.en_service|default:0 }}</span>
+                <span class="text-green-600">En service:</span>
+                <span class="font-semibold text-green-600" id="stat-service">{{ stats.en_service|default:0 }}</span>
             </div>
             <div class="flex justify-between">
-                <span class="text-red-600">Panne:</span>
-                <span class="font-semibold">{{ stats.en_panne|default:0 }}</span>
+                <span class="text-red-600">En panne:</span>
+                <span class="font-semibold text-red-600" id="stat-panne">{{ stats.en_panne|default:0 }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-yellow-600">Maintenance:</span>
+                <span class="font-semibold text-yellow-600" id="stat-maintenance">{{ stats.en_maintenance|default:0 }}</span>
+            </div>
+            <div class="flex justify-between border-t pt-1 mt-2">
+                <span class="text-purple-600">Câbles créés:</span>
+                <span class="font-semibold text-purple-600" id="stat-cables">0</span>
             </div>
         </div>
     </div>
 
-    <!-- Boutons -->
-    <div class="absolute top-4 right-4 space-x-2 z-40">
-        <button onclick="toggleSidebar()" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-blue-700">
-            <i class="fas fa-info-circle"></i>
+    <div class="absolute top-4 right-4 flex space-x-2 z-40">
+        <button onclick="toggleSidebar()" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-200 flex items-center">
+            <i class="fas fa-info-circle mr-2"></i>
+            Infos
         </button>
-        <button onclick="centrerSurAssets()" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-green-700">
-            🎯 Centrer
+        <button onclick="centrerSurAssets()" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-green-700 transition-all duration-200 flex items-center">
+            <i class="fas fa-crosshairs mr-2"></i>
+            Centrer
+        </button>
+        <button onclick="refreshMap()" class="bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-purple-700 transition-all duration-200 flex items-center">
+            <i class="fas fa-sync-alt mr-2"></i>
+            Actualiser
         </button>
     </div>
 
-    <!-- Palette d'outils FTTH -->
-    <div id="ftth-tools-palette" class="absolute top-20 right-4 bg-white p-4 rounded-lg shadow-lg z-40 min-w-48">
+    <div id="ftth-tools-palette" class="absolute top-20 right-4 bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-lg z-40 min-w-48">
         <h4 class="font-bold text-gray-800 mb-3 flex items-center">
             <i class="fas fa-drafting-compass mr-2 text-blue-600"></i>
-            Outils FTTH
+            Outils FTTH Pro
         </h4>
-        
-        <div class="grid grid-cols-2 gap-2">
-            <button onclick="activateToolMode('nro')" class="ftth-tool-btn" data-tool="nro">
+
+        <div class="grid grid-cols-2 gap-2 mb-4">
+            <button onclick="activateToolMode('nro')" class="ftth-tool-btn" data-tool="nro" title="Nœud de Raccordement Optique">
                 <i class="fas fa-server" style="color: #dc2626;"></i>
                 <span>NRO</span>
             </button>
-            
-            <button onclick="activateToolMode('pm')" class="ftth-tool-btn" data-tool="pm">
+
+            <button onclick="activateToolMode('pm')" class="ftth-tool-btn" data-tool="pm" title="Point de Mutualisation">
                 <i class="fas fa-network-wired" style="color: #ea580c;"></i>
                 <span>PM</span>
             </button>
-            
-            <button onclick="activateToolMode('pb')" class="ftth-tool-btn" data-tool="pb">
+
+            <button onclick="activateToolMode('pb')" class="ftth-tool-btn" data-tool="pb" title="Point de Branchement">
                 <i class="fas fa-cube" style="color: #ca8a04;"></i>
                 <span>PB</span>
             </button>
-            
-            <button onclick="activateToolMode('pto')" class="ftth-tool-btn" data-tool="pto">
+
+            <button onclick="activateToolMode('pto')" class="ftth-tool-btn" data-tool="pto" title="Prise Terminale Optique">
                 <i class="fas fa-home" style="color: #16a34a;"></i>
                 <span>PTO</span>
             </button>
-            
-            <button onclick="activateToolMode('cable')" class="ftth-tool-btn" data-tool="cable">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 mb-4">
+            <button onclick="activateToolMode('cable')" class="ftth-tool-btn" data-tool="cable" title="Tracer des câbles">
                 <i class="fas fa-minus" style="color: #7c3aed;"></i>
                 <span>Câble</span>
             </button>
-            
-            <button onclick="activateToolMode('measure')" class="ftth-tool-btn" data-tool="measure">
+
+            <button onclick="activateToolMode('cable-connect')" class="ftth-tool-btn" data-tool="cable-connect" title="Raccorder équipements">
+                <i class="fas fa-link" style="color: #059669;"></i>
+                <span>Raccord</span>
+            </button>
+
+            <button onclick="activateToolMode('measure')" class="ftth-tool-btn" data-tool="measure" title="Mesurer distance">
                 <i class="fas fa-ruler" style="color: #6b7280;"></i>
                 <span>Mesure</span>
             </button>
-            
-            <button onclick="clearDrawings()" class="ftth-tool-btn col-span-2">
-                <i class="fas fa-eraser" style="color: #ef4444;"></i>
-                <span>Effacer</span>
+
+            <button onclick="activateToolMode('area')" class="ftth-tool-btn" data-tool="area" title="Calculer surface">
+                <i class="fas fa-draw-polygon" style="color: #0891b2;"></i>
+                <span>Surface</span>
             </button>
         </div>
+
+        <div class="space-y-2">
+            <button onclick="clearDrawings()" class="ftth-tool-btn w-full bg-red-50 hover:bg-red-100 text-red-600 border-red-200">
+                <i class="fas fa-eraser"></i>
+                <span>Effacer tout</span>
+            </button>
+
+            <button onclick="saveCurrentWork()" class="ftth-tool-btn w-full bg-green-50 hover:bg-green-100 text-green-600 border-green-200">
+                <i class="fas fa-save"></i>
+                <span>Sauvegarder</span>
+            </button>
+        </div>
+
+        <div class="mt-3 pt-3 border-t border-gray-200">
+            <div class="text-xs text-gray-600">Mode actuel:</div>
+            <div id="current-mode" class="text-sm font-semibold text-blue-600">Sélection</div>
+        </div>
     </div>
 
-    <!-- Légende -->
-    <div class="absolute bottom-4 left-4 bg-white p-4 rounded-lg shadow-lg z-40">
-        <h4 class="font-bold text-gray-800 mb-2">Statuts</h4>
-        <div class="space-y-2 text-sm">
-            <div class="flex items-center">
-                <div class="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
-                <span>En service</span>
+    <div class="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-lg z-40 max-w-xs">
+        <h4 class="font-bold text-gray-800 mb-2 flex items-center">
+            <i class="fas fa-info-circle mr-2 text-blue-600"></i>
+            Légende
+        </h4>
+
+        <div class="mb-3">
+            <h5 class="text-sm font-medium text-gray-700 mb-1">Statuts</h5>
+            <div class="space-y-1 text-xs">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                    <span>En service</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                    <span>En panne</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                    <span>Maintenance</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-gray-500 rounded-full mr-2"></div>
+                    <span>Hors service</span>
+                </div>
             </div>
-            <div class="flex items-center">
-                <div class="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
-                <span>En panne</span>
-            </div>
-            <div class="flex items-center">
-                <div class="w-4 h-4 bg-yellow-500 rounded-full mr-2"></div>
-                <span>Maintenance</span>
+        </div>
+
+        <div>
+            <h5 class="text-sm font-medium text-gray-700 mb-1">Équipements FTTH</h5>
+            <div class="space-y-1 text-xs">
+                <div class="flex items-center">
+                    <i class="fas fa-server text-red-600 mr-2"></i>
+                    <span>NRO (Nœud Raccordement)</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-network-wired text-orange-600 mr-2"></i>
+                    <span>PM (Point Mutualisation)</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-cube text-yellow-600 mr-2"></i>
+                    <span>PB (Point Branchement)</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-home text-green-600 mr-2"></i>
+                    <span>PTO (Prise Terminale)</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Carte -->
-    <div id="map" style="height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; z-index: 10;"></div>
+   <div class="w-full h-screen overflow-hidden relative">
+    <div id="map" style=""></div>
+    </div>
 
-    <!-- Sidebar -->
-    <div id="sidebar" class="fixed top-0 right-0 w-80 h-full bg-white shadow-xl transform translate-x-full transition-transform duration-300 z-50">
+    <div id="sidebar" class="fixed top-0 right-0 w-80 h-full bg-white shadow-xl transform translate-x-full transition-transform duration-300 z-50 border-l-4 border-blue-500">
         <div class="p-6 h-full overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">Détails Asset</h2>
-                <button onclick="closeSidebar()" class="text-gray-500 hover:text-gray-700">
+                <h2 class="text-xl font-bold text-gray-800">Détails Asset</h2>
+                <button onclick="closeSidebar()" class="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
-            <div id="sidebar-content">
-                <p class="text-gray-500">Sélectionnez un asset sur la carte.</p>
+            <div id="sidebar-content" class="space-y-4">
+                <div class="text-gray-500 text-center py-8">
+                    <i class="fas fa-mouse-pointer text-4xl mb-4 text-gray-300"></i>
+                    <p>Sélectionnez un asset sur la carte pour voir ses détails.</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Formulaire de création d'équipement -->
     <div id="equipment-form-sidebar" class="fixed top-0 right-0 w-96 h-full bg-white shadow-xl transform translate-x-full transition-transform duration-300 z-50 border-l-4 border-blue-500">
         <div class="p-6 h-full overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-blue-600">
+                <h2 class="text-xl font-bold text-blue-600 flex items-center">
                     <i class="fas fa-plus-circle mr-2"></i>
                     Nouvel Équipement FTTH
                 </h2>
-                <button onclick="closeEquipmentForm()" class="text-gray-500 hover:text-gray-700">
+                <button onclick="closeEquipmentForm()" class="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
-            
+
             <form id="equipment-form" class="space-y-4">
-                <!-- Type d'équipement -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Type d'équipement *</label>
-                    <select id="equipment-type" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                        <option value="">Sélectionner...</option>
+                    <select id="equipment-type" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Sélectionner le type...</option>
                         <option value="NRO">NRO - Nœud de Raccordement Optique</option>
                         <option value="PM">PM - Point de Mutualisation</option>
                         <option value="PB">PB - Point de Branchement</option>
@@ -197,104 +315,107 @@
                     </select>
                 </div>
 
-                <!-- Nom -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
-                    <input type="text" id="equipment-name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: NRO-PARIS-01" required>
+                <div class="grid grid-cols-1 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nom de l'équipement *</label>
+                        <input type="text" id="equipment-name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: NRO-PARIS-01">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Référence</label>
+                        <input type="text" id="equipment-reference" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: REF-2025-001">
+                    </div>
                 </div>
 
-                <!-- Référence -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Référence</label>
-                    <input type="text" id="equipment-reference" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Référence technique">
-                </div>
-
-                <!-- Marque et Modèle -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Marque</label>
-                        <input type="text" id="equipment-brand" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: Huawei">
+                        <select id="equipment-brand" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Sélectionner...</option>
+                            <option value="Huawei">Huawei</option>
+                            <option value="Nokia">Nokia</option>
+                            <option value="Ericsson">Ericsson</option>
+                            <option value="Alcatel">Alcatel-Lucent</option>
+                            <option value="CommScope">CommScope</option>
+                            <option value="Corning">Corning</option>
+                            <option value="Autre">Autre</option>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Modèle</label>
-                        <input type="text" id="equipment-model" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: MA5608T">
+                        <input type="text" id="equipment-model" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: OLT-5680T">
                     </div>
                 </div>
 
-                <!-- Localisation -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
-                    <input type="text" id="equipment-location" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: Armoire rue de la Paix">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Statut *</label>
+                        <select id="equipment-status" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="EN_SERVICE">En service</option>
+                            <option value="EN_PANNE">En panne</option>
+                            <option value="EN_MAINTENANCE">En maintenance</option>
+                            <option value="HORS_SERVICE">Hors service</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Criticité</label>
+                        <select id="equipment-criticality" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="1">Basse</option>
+                            <option value="2" selected>Moyenne</option>
+                            <option value="3">Haute</option>
+                            <option value="4">Critique</option>
+                        </select>
+                    </div>
                 </div>
 
-                <!-- Coordonnées GPS -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Latitude *</label>
-                        <input type="number" id="equipment-lat" step="0.000001" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" readonly>
+                        <input type="number" id="equipment-lat" step="0.000001" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" readonly>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Longitude *</label>
-                        <input type="number" id="equipment-lng" step="0.000001" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" readonly>
+                        <input type="number" id="equipment-lng" step="0.000001" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" readonly>
                     </div>
                 </div>
 
-                <!-- Champs techniques FTTH -->
-                <div id="technical-fields" class="space-y-3 hidden">
-                    <div class="border-t pt-3">
-                        <h4 class="font-medium text-gray-800 mb-2">Spécifications techniques</h4>
-                        
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de fibres total</label>
-                                <input type="number" id="equipment-fibers-total" min="1" max="288" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 48">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Fibres utilisées</label>
-                                <input type="number" id="equipment-fibers-used" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 12">
-                            </div>
-                        </div>
-                        
+                <div id="technical-fields" class="space-y-3 border-t pt-4">
+                    <h4 class="font-medium text-gray-800 mb-2 flex items-center">
+                        <i class="fas fa-cogs mr-2 text-blue-600"></i>
+                        Spécifications techniques FTTH
+                    </h4>
+
+                    <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Type de connecteur</label>
-                            <select id="equipment-connector" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="">Sélectionner...</option>
-                                <option value="SC">SC</option>
-                                <option value="LC">LC</option>
-                                <option value="FC">FC</option>
-                                <option value="ST">ST</option>
-                                <option value="E2000">E2000</option>
-                            </select>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de fibres total</label>
+                            <input type="number" id="equipment-fibers-total" min="1" max="288" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 48">
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Fibres utilisées</label>
+                            <input type="number" id="equipment-fibers-used" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 12">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Type de connecteur</label>
+                        <select id="equipment-connector" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Sélectionner...</option>
+                            <option value="SC">SC (Standard Connector)</option>
+                            <option value="LC">LC (Lucent Connector)</option>
+                            <option value="FC">FC (Fiber Channel)</option>
+                            <option value="ST">ST (Straight Tip)</option>
+                            <option value="E2000">E2000</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- Statut -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Statut *</label>
-                    <select id="equipment-status" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                        <option value="EN_SERVICE">En service</option>
-                        <option value="EN_MAINTENANCE">En maintenance</option>
-                        <option value="EN_PANNE">En panne</option>
-                        <option value="HORS_SERVICE">Hors service</option>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Adresse/Localisation</label>
+                    <textarea id="equipment-location" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Adresse précise ou description de l'emplacement"></textarea>
                 </div>
 
-                <!-- Criticité -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Criticité *</label>
-                    <select id="equipment-criticality" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                        <option value="1">Basse</option>
-                        <option value="2" selected>Moyenne</option>
-                        <option value="3">Haute</option>
-                        <option value="4">Critique</option>
-                    </select>
-                </div>
-
-                <!-- Dates -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Mise en service</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Date de mise en service</label>
                         <input type="date" id="equipment-service-date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <div>
@@ -303,19 +424,17 @@
                     </div>
                 </div>
 
-                <!-- Notes -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                    <textarea id="equipment-notes" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" placeholder="Informations complémentaires..."></textarea>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes et observations</label>
+                    <textarea id="equipment-notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Informations complémentaires, observations techniques..."></textarea>
                 </div>
 
-                <!-- Boutons -->
-                <div class="flex space-x-3 pt-4">
-                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
+                <div class="flex space-x-3 pt-4 border-t">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center">
                         <i class="fas fa-save mr-2"></i>
                         Créer l'équipement
                     </button>
-                    <button type="button" onclick="closeEquipmentForm()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 transition-colors">
+                    <button type="button" onclick="closeEquipmentForm()" class="flex-1 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center justify-center">
                         <i class="fas fa-times mr-2"></i>
                         Annuler
                     </button>
@@ -325,921 +444,634 @@
     </div>
 </div>
 
+<div id="notification-container" class="fixed top-20 right-4 z-[9999] space-y-2"></div>
+
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 // Variables globales
-let map = null;
-let assetsLayer = null;
-let drawingLayer = null;
-let currentToolMode = null;
-let cablePoints = [];
-let currentCableLine = null;
-let measurePoints = [];
+let map;
+let drawingLayer;
+let currentTool = null;
+let currentMarker = null; // Unused, can be removed if not planned for future use
+let currentSegment = null; // Used for cable connection logic
+let currentCableLine = null; // Represents the temporary line being drawn for cables
+let cablePoints = []; // Stores points for free-drawn cables
+let cableEquipments = []; // Stores equipment markers selected for cable connection
+let measurePoints = []; // Stores points for distance measurement
+let cables = []; // Stores all drawn cable objects
+let equipments = []; // Stores all loaded equipment objects
 
-// Données
-const DEFAULT_LAT = 48.8566;
-const DEFAULT_LNG = 2.3522;
-let assetsData = null;
-let centerLat = DEFAULT_LAT;
-let centerLng = DEFAULT_LNG;
+// Variables pour les stats
+let stats = {
+    total: 0,
+    en_service: 0,
+    en_panne: 0,
+    en_maintenance: 0,
+    cables: 0
+};
 
-// Récupération des données Django
-try {
-    const rawData = {{ assets_geojson|safe }};
-    if (rawData && rawData.features) {
-        assetsData = rawData;
-    } else {
-        assetsData = { type: "FeatureCollection", features: [] };
+// Configuration des couleurs par type d'équipement
+const equipmentConfig = {
+    'NRO': { color: '#dc2626', iconClass: 'fas fa-server', name: 'NRO' },
+    'PM': { color: '#ea580c', iconClass: 'fas fa-network-wired', name: 'Point de Mutualisation' },
+    'PB': { color: '#ca8a04', iconClass: 'fas fa-cube', name: 'Point de Branchement' },
+    'PTO': { color: '#16a34a', iconClass: 'fas fa-home', name: 'Prise Terminale Optique' }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof L === 'undefined') {
+        console.error('La bibliothèque Leaflet n\'est pas chargée.');
+        showNotification('Erreur: La carte ne peut pas être chargée (Leaflet manquant).', 'error');
+        return;
     }
-} catch (e) {
-    console.error('Erreur données assets:', e);
-    assetsData = { type: "FeatureCollection", features: [] };
-}
 
-// Centre de la carte
-try {
-    const backendLat = parseFloat("{{ center_lat|default:'' }}");
-    const backendLng = parseFloat("{{ center_lng|default:'' }}");
-    
-    if (!isNaN(backendLat) && !isNaN(backendLng)) {
-        centerLat = backendLat;
-        centerLng = backendLng;
+    initializeMap(); // Initialize map and set global variables
+    loadExistingEquipments();
+    setupEventListeners();
+    showNotification('Interface FTTH initialisée', 'success');
+});
+
+function initializeMap() {
+    let centerLatStr = "{{ center_lat|default:'48.8566' }}";
+    let centerLngStr = "{{ center_lng|default:'2.3522' }}";
+
+    centerLatStr = centerLatStr.replace(',', '.');
+    centerLngStr = centerLngStr.replace(',', '.');
+
+    let centerLat = parseFloat(centerLatStr);
+    let centerLng = parseFloat(centerLngStr);
+
+    if (isNaN(centerLat) || isNaN(centerLng)) {
+        console.warn('Coordonnées invalides, utilisation des valeurs par défaut (Paris).');
+        centerLat = 48.8566;
+        centerLng = 2.3522;
     }
-} catch (e) {
-    console.log('Utilisation centre par défaut');
-}
 
-// Initialisation carte
-function initMap() {
-    try {
-        // Créer la carte
-        map = L.map('map').setView([centerLat, centerLng], 10);
-        
-        // Initialiser le layer de dessin
-        drawingLayer = L.layerGroup().addTo(map);
-
-        // Ajouter les tuiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-        // Ajouter les assets
-        addAssets();
-        
-        // Redimensionner
-        setTimeout(() => {
-            map.invalidateSize();
-        }, 100);
-        
-    } catch (error) {
-        console.error('Erreur init carte:', error);
+    const mapElement = document.getElementById('map');
+    if (!mapElement) {
+        console.error('L\'élément DOM avec l\'ID "map" n\'existe pas.');
+        return;
     }
-}
 
-// Ajout des assets
-function addAssets() {
-    try {
-        if (!assetsData || !assetsData.features || assetsData.features.length === 0) {
-            return;
+    // Assign to global map variable
+    map = L.map('map').setView([centerLat, centerLng], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+
+
+    // Assign to global drawingLayer variable
+    drawingLayer = L.layerGroup().addTo(map);
+
+    map.on('click', onMapClick);
+    map.invalidateSize();
+    // Double-click to finish cable drawing
+    map.on('dblclick', function(e) {
+        if (currentTool === 'cable' && cablePoints.length >= 2) {
+            createCableSegment(cablePoints.map(p => [p.lat, p.lng]), {
+                startType: 'free',
+                endType: 'free',
+                startRef: 'Point libre',
+                endRef: 'Point libre'
+            });
+
+            // Clean up temporary line
+            if (currentCableLine) {
+                drawingLayer.removeLayer(currentCableLine);
+            }
+
+            resetDrawingState();
+            showNotification('Câble terminé', 'success');
+        } else if (currentTool === 'measure' && measurePoints.length === 1) {
+            // If only one point for measurement, double-click acts like a second click
+            addMeasurePoint(e.latlng.lat, e.latlng.lng);
         }
+    });
 
-        const validFeatures = assetsData.features.filter(feature => {
-            if (!feature.geometry || !feature.geometry.coordinates) return false;
-            const coords = feature.geometry.coordinates;
-            return Array.isArray(coords) && coords.length === 2 && 
-                   !isNaN(coords[0]) && !isNaN(coords[1]);
-        });
+    console.log('🗺️ Carte FTTH initialisée avec succès');
+}
 
-        if (validFeatures.length === 0) return;
-
-        assetsLayer = L.geoJSON({ 
-            type: "FeatureCollection", 
-            features: validFeatures 
-        }, {
-            pointToLayer: function(feature, latlng) {
-                const props = feature.properties || {};
-                const color = getStatusColor(props.statut);
-                
-                return L.circleMarker(latlng, {
-                    radius: 8,
-                    fillColor: color,
-                    color: '#fff',
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 0.8
-                });
-            },
-            onEachFeature: function(feature, layer) {
-                const props = feature.properties || {};
-                
-                const popup = `
-                    <div class="p-2">
-                        <h3 class="font-bold">${props.nom || 'Asset'}</h3>
-                        <p class="text-sm">Statut: ${props.statut || 'Inconnu'}</p>
-                        <button onclick="showDetails(${props.id || 0})" class="mt-2 bg-blue-500 text-white px-2 py-1 rounded text-xs">
-                            Détails
-                        </button>
-                    </div>
-                `;
-                
-                layer.bindPopup(popup);
-                
-                layer.on('click', function() {
-                    if (props.id) {
-                        showDetails(props.id);
+function loadExistingEquipments() {
+    fetch('/api/ftth/equipment/list/')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Clear existing equipments before loading to prevent duplication on refresh
+                equipments = [];
+                drawingLayer.eachLayer(layer => {
+                    if (layer.equipmentData) { // Check if it's an equipment marker
+                        drawingLayer.removeLayer(layer);
                     }
                 });
+
+                data.equipments.forEach(equipment => {
+                    addEquipmentToMap(equipment);
+                });
+                updateStats();
+                console.log(`📡 ${data.equipments.length} équipements chargés`);
+            } else {
+                showNotification(`Erreur: ${data.error}`, 'error');
             }
-        }).addTo(map);
-        
-    } catch (error) {
-        console.error('Erreur ajout assets:', error);
-    }
+        })
+        .catch(error => {
+            console.error('Erreur chargement équipements:', error);
+            showNotification('Erreur lors du chargement des équipements', 'error');
+        });
 }
 
-// Fonctions utilitaires
-function getStatusColor(statut) {
-    switch ((statut || '').toLowerCase()) {
-        case 'en service': return '#10b981';
-        case 'en panne': return '#ef4444';
-        case 'en maintenance': return '#f59e0b';
-        default: return '#6b7280';
+function addEquipmentToMap(equipmentData) {
+    if (!equipmentData.coordinates || !drawingLayer) {
+        console.error('Données d\'équipement ou drawingLayer manquants pour ajouter à la carte.');
+        return;
     }
+
+    const config = equipmentConfig[equipmentData.type] || equipmentConfig['PTO'];
+    const statusColor = getStatusColor(equipmentData.status);
+
+    // Create custom icon
+    const iconHtml = `<div style="background: ${statusColor}; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                        <i class="${config.iconClass}" style="color: white; font-size: 12px;"></i>
+                      </div>`;
+    const equipmentIcon = L.divIcon({
+        html: iconHtml,
+        className: 'ftth-equipment-marker',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+    });
+
+    const marker = L.marker([equipmentData.coordinates.lat, equipmentData.coordinates.lng], {
+        icon: equipmentIcon
+    });
+
+    // Enriched popup
+    const popupContent = createEquipmentPopup(equipmentData);
+    marker.bindPopup(popupContent, { className: 'ftth-popup' });
+
+    // Events
+    marker.on('click', function() {
+        if (currentTool === 'cable-connect') {
+            addEquipmentToCable(marker);
+        } else {
+            // Show sidebar with equipment details when clicked in selection mode
+            displayEquipmentDetailsInSidebar(equipmentData);
+            toggleSidebar(); // Open sidebar
+        }
+    });
+
+    // Store data in the marker for easy access
+    marker.equipmentData = equipmentData;
+
+    drawingLayer.addLayer(marker);
+
+    equipments.push({
+        marker: marker,
+        data: equipmentData
+    });
 }
 
-// Outils FTTH
-function activateToolMode(toolType) {
-    document.querySelectorAll('.ftth-tool-btn').forEach(btn => btn.classList.remove('active'));
-    
-    const btn = document.querySelector(`[data-tool="${toolType}"]`);
-    if (btn) btn.classList.add('active');
-    
-    currentToolMode = toolType;
-    map.getContainer().style.cursor = 'crosshair';
-    
-    // Désactiver les popups des équipements en mode câble
-    if (toolType === 'cable') {
-        disableEquipmentPopups();
-        console.log('🔧 Mode câble: popups désactivées, cliquez sur les équipements pour les relier');
-    } else {
-        enableEquipmentPopups();
+function displayEquipmentDetailsInSidebar(equipment) {
+    const sidebarContent = document.getElementById('sidebar-content');
+    const config = equipmentConfig[equipment.type] || equipmentConfig['PTO'];
+    const fibersInfo = equipment.fibers_total ?
+        `<div class="text-sm text-gray-700 mt-3">
+            <h5 class="font-semibold mb-1">Capacité Fibres:</h5>
+            <div class="flex justify-between items-center">
+                <span>Utilisées: <span class="font-semibold">${equipment.fibers_used || 0}</span></span>
+                <span>Total: <span class="font-semibold">${equipment.fibers_total}</span></span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                <div class="bg-blue-600 h-2 rounded-full" style="width: ${(equipment.fibers_used || 0) / equipment.fibers_total * 100}%"></div>
+            </div>
+        </div>` : '';
+
+    sidebarContent.innerHTML = `
+        <div class="space-y-4">
+            <h3 class="text-2xl font-bold text-blue-700 flex items-center">
+                <i class="${config.iconClass} mr-3"></i>
+                ${equipment.name || 'Équipement'}
+            </h3>
+            <div class="grid grid-cols-2 gap-y-2 text-gray-700">
+                <div><strong>Référence:</strong></div>
+                <div>${equipment.reference || 'N/A'}</div>
+
+                <div><strong>Type:</strong></div>
+                <div>${config.name}</div>
+
+                <div><strong>Statut:</strong></div>
+                <div><span class="px-2 py-1 rounded text-xs bg-${getStatusBgColor(equipment.status)} text-white">${getStatusDisplay(equipment.status)}</span></div>
+
+                ${equipment.brand ? `<div><strong>Marque:</strong></div><div>${equipment.brand}</div>` : ''}
+                ${equipment.model ? `<div><strong>Modèle:</strong></div><div>${equipment.model}</div>` : ''}
+
+                <div><strong>Latitude:</strong></div>
+                <div>${equipment.coordinates.lat.toFixed(6)}</div>
+
+                <div><strong>Longitude:</strong></div>
+                <div>${equipment.coordinates.lng.toFixed(6)}</div>
+
+                ${equipment.connector ? `<div><strong>Connecteur:</strong></div><div>${equipment.connector}</div>` : ''}
+            </div>
+
+            ${fibersInfo}
+
+            ${equipment.location ? `
+            <div class="mt-4">
+                <h5 class="font-semibold mb-1 text-gray-800">Localisation:</h5>
+                <p class="text-gray-700">${equipment.location}</p>
+            </div>` : ''}
+
+            ${equipment.notes ? `
+            <div class="mt-4">
+                <h5 class="font-semibold mb-1 text-gray-800">Notes:</h5>
+                <p class="text-gray-700">${equipment.notes}</p>
+            </div>` : ''}
+
+            <div class="mt-4 flex space-x-2">
+                <button onclick="editEquipment(${equipment.id})" class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm hover:bg-blue-700">
+                    <i class="fas fa-edit mr-1"></i>Modifier
+                </button>
+                <button onclick="deleteEquipment(${equipment.id})" class="flex-1 bg-red-600 text-white px-3 py-2 rounded-md text-sm hover:bg-red-700">
+                    <i class="fas fa-trash mr-1"></i>Supprimer
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+
+function createEquipmentPopup(equipment) {
+    const config = equipmentConfig[equipment.type] || equipmentConfig['PTO'];
+    const fibersInfo = equipment.fibers_total ?
+        `<div class="text-sm text-gray-600 mt-2">
+            <div>Fibres: ${equipment.fibers_used || 0}/${equipment.fibers_total}</div>
+            <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                <div class="bg-blue-600 h-2 rounded-full" style="width: ${(equipment.fibers_used || 0) / equipment.fibers_total * 100}%"></div>
+            </div>
+        </div>` : '';
+
+    return `
+        <div class="ftth-popup">
+            <div class="ftth-popup-header">
+                <h3 class="font-bold flex items-center">
+                    <i class="${config.iconClass} mr-2"></i>
+                    ${equipment.name || 'Équipement'}
+                </h3>
+                <div class="text-sm opacity-90">${equipment.reference || 'Pas de référence'}</div>
+            </div>
+            <div class="ftth-popup-content">
+                <div class="space-y-2 text-sm">
+                    <div><strong>Type:</strong> ${config.name}</div>
+                    <div><strong>Statut:</strong> <span class="px-2 py-1 rounded text-xs bg-${getStatusBgColor(equipment.status)} text-white">${getStatusDisplay(equipment.status)}</span></div>
+                    ${equipment.brand ? `<div><strong>Marque:</strong> ${equipment.brand}</div>` : ''}
+                    ${equipment.model ? `<div><strong>Modèle:</strong> ${equipment.model}</div>` : ''}
+                    ${equipment.location ? `<div><strong>Localisation:</strong> ${equipment.location}</div>` : ''}
+                    ${fibersInfo}
+                </div>
+                <div class="flex space-x-2 mt-3">
+                    <button onclick="editEquipment(${equipment.id})" class="flex-1 bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">
+                        <i class="fas fa-edit mr-1"></i>Modifier
+                    </button>
+                    <button onclick="deleteEquipment(${equipment.id})" class="flex-1 bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700">
+                        <i class="fas fa-trash mr-1"></i>Supprimer
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'EN_SERVICE': '#10b981',
+        'EN_PANNE': '#ef4444',
+        'EN_MAINTENANCE': '#f59e0b',
+        'HORS_SERVICE': '#6b7280'
+    };
+    return colors[status] || '#6b7280';
+}
+
+function getStatusBgColor(status) {
+    const colors = {
+        'EN_SERVICE': 'green-500',
+        'EN_PANNE': 'red-500',
+        'EN_MAINTENANCE': 'yellow-500',
+        'HORS_SERVICE': 'gray-500'
+    };
+    return colors[status] || 'gray-500';
+}
+
+function getStatusDisplay(status) {
+    const displays = {
+        'EN_SERVICE': 'En service',
+        'EN_PANNE': 'En panne',
+        'EN_MAINTENANCE': 'Maintenance',
+        'HORS_SERVICE': 'Hors service'
+    };
+    return displays[status] || 'Inconnu';
+}
+
+function setupEventListeners() {
+    document.getElementById('search-input').addEventListener('input', performSearch);
+    document.getElementById('equipment-form').addEventListener('submit', createEquipment);
+    document.getElementById('equipment-type').addEventListener('change', updateEquipmentForm);
+    console.log('🎮 Event listeners configurés');
+}
+
+function activateToolMode(tool) {
+    // Deactivate previous tool
+    if (currentTool) {
+        document.querySelector(`[data-tool="${currentTool}"]`)?.classList.remove('active');
     }
-    
-    map.off('click', onMapClick);
-    map.on('click', onMapClick);
+
+    // Reset drawing variables
+    resetDrawingState();
+
+    // Activate new tool
+    currentTool = tool;
+    document.querySelector(`[data-tool="${tool}"]`)?.classList.add('active');
+
+    // Update mode display
+    document.getElementById('current-mode').textContent = getToolDisplayName(tool);
+
+    // Change map cursor
+    map.getContainer().style.cursor = (tool === 'measure' || tool === 'cable' || tool.startsWith('p')) ? 'crosshair' : ''; // 'p' for placement tools (nro, pm, pb, pto)
+
+    showNotification(`Outil activé: ${getToolDisplayName(tool)}`, 'success');
+    console.log(`🔧 Outil activé: ${tool}`);
+}
+
+function getToolDisplayName(tool) {
+    const names = {
+        'nro': 'Placement NRO',
+        'pm': 'Placement PM',
+        'pb': 'Placement PB',
+        'pto': 'Placement PTO',
+        'cable': 'Tracé libre',
+        'cable-connect': 'Raccordement',
+        'measure': 'Mesure distance',
+        'area': 'Calcul surface'
+    };
+    return names[tool] || 'Sélection';
 }
 
 function onMapClick(e) {
-    if (!currentToolMode) return;
-    
-    const latlng = e.latlng;
-    
-    switch(currentToolMode) {
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+
+    switch(currentTool) {
         case 'nro':
-            addEquipment(latlng, 'NRO', '#dc2626', 'fas fa-server');
-            break;
         case 'pm':
-            addEquipment(latlng, 'PM', '#ea580c', 'fas fa-network-wired');
-            break;
         case 'pb':
-            addEquipment(latlng, 'PB', '#ca8a04', 'fas fa-cube');
-            break;
         case 'pto':
-            addEquipment(latlng, 'PTO', '#16a34a', 'fas fa-home');
+            openEquipmentForm(lat, lng, currentTool.toUpperCase());
             break;
+
         case 'cable':
-            addCablePoint(latlng);
+            addCablePoint(lat, lng);
             break;
+
         case 'measure':
-            measureDistance(latlng);
+            addMeasurePoint(lat, lng);
+            break;
+
+        case 'area':
+            // TODO: Implement area calculation
+            showNotification('Calcul de surface non encore implémenté.', 'info');
+            break;
+
+        default:
+            // Selection mode - do nothing specific on map click
             break;
     }
 }
 
-function addEquipment(latlng, type, color, iconClass) {
-    // Ouvrir le formulaire au lieu de créer directement
-    openEquipmentForm(latlng, type, color, iconClass);
+function openEquipmentForm(lat, lng, type) {
+    // Fill coordinates
+    document.getElementById('equipment-lat').value = lat.toFixed(6);
+    document.getElementById('equipment-lng').value = lng.toFixed(6);
+
+    // Select type
+    document.getElementById('equipment-type').value = type;
+
+    // Generate a default name
+    const config = equipmentConfig[type];
+    const timestamp = Date.now().toString().slice(-4);
+    document.getElementById('equipment-name').value = `${type}-${timestamp}`;
+
+    // Fill default values based on type
+    updateEquipmentForm();
+
+    // Open the sidebar
+    document.getElementById('equipment-form-sidebar').classList.remove('translate-x-full');
+
+    console.log(`📝 Formulaire ouvert pour ${type} à (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
 }
 
-// Variables globales pour le formulaire
-let pendingEquipment = null;
-
-function openEquipmentForm(latlng, type, color, iconClass) {
-    // Stocker les données temporaires
-    pendingEquipment = {
-        latlng: latlng,
-        type: type,
-        color: color,
-        iconClass: iconClass
-    };
-    
-    // Remplir le formulaire
-    document.getElementById('equipment-type').value = type;
-    document.getElementById('equipment-lat').value = latlng.lat.toFixed(6);
-    document.getElementById('equipment-lng').value = latlng.lng.toFixed(6);
-    document.getElementById('equipment-name').value = `${type}-${Date.now()}`;
-    
-    // Afficher les champs techniques selon le type
+function updateEquipmentForm() {
+    const type = document.getElementById('equipment-type').value;
     const technicalFields = document.getElementById('technical-fields');
-    if (['NRO', 'PM', 'PB'].includes(type)) {
+
+    if (type) {
         technicalFields.classList.remove('hidden');
+
+        // Default values based on type
+        const defaults = {
+            'NRO': { fibers: 288, connector: 'LC' },
+            'PM': { fibers: 96, connector: 'SC' },
+            'PB': { fibers: 24, connector: 'SC' },
+            'PTO': { fibers: 4, connector: 'SC' }
+        };
+
+        const config = defaults[type];
+        if (config) {
+            document.getElementById('equipment-fibers-total').value = config.fibers;
+            document.getElementById('equipment-connector').value = config.connector;
+        }
     } else {
         technicalFields.classList.add('hidden');
     }
-    
-    // Ouvrir le formulaire
-    const formSidebar = document.getElementById('equipment-form-sidebar');
-    formSidebar.classList.remove('translate-x-full');
-    
-    console.log(`📝 Formulaire ouvert pour ${type} à:`, latlng);
 }
 
-function closeEquipmentForm() {
-    const formSidebar = document.getElementById('equipment-form-sidebar');
-    formSidebar.classList.add('translate-x-full');
-    
-    // Reset
-    document.getElementById('equipment-form').reset();
-    pendingEquipment = null;
-}
+function createEquipment(e) {
+    e.preventDefault();
 
-// Gestion du formulaire
-document.addEventListener('DOMContentLoaded', function() {
-    const equipmentForm = document.getElementById('equipment-form');
-    if (equipmentForm) {
-        equipmentForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            createEquipmentFromForm();
-        });
-    }
-    
-    // Afficher/masquer champs techniques selon le type
-    const typeSelect = document.getElementById('equipment-type');
-    if (typeSelect) {
-        typeSelect.addEventListener('change', function() {
-            const technicalFields = document.getElementById('technical-fields');
-            if (['NRO', 'PM', 'PB'].includes(this.value)) {
-                technicalFields.classList.remove('hidden');
-            } else {
-                technicalFields.classList.add('hidden');
-            }
-        });
-    }
-});
-
-function createEquipmentFromForm() {
-    if (!pendingEquipment) return;
-    
-    // Récupérer les données du formulaire
+    // Collect form data
     const formData = {
         type: document.getElementById('equipment-type').value,
         name: document.getElementById('equipment-name').value,
         reference: document.getElementById('equipment-reference').value,
         brand: document.getElementById('equipment-brand').value,
         model: document.getElementById('equipment-model').value,
-        location: document.getElementById('equipment-location').value,
-        latitude: parseFloat(document.getElementById('equipment-lat').value),
-        longitude: parseFloat(document.getElementById('equipment-lng').value),
-        fibers_total: document.getElementById('equipment-fibers-total').value,
-        fibers_used: document.getElementById('equipment-fibers-used').value,
-        connector: document.getElementById('equipment-connector').value,
         status: document.getElementById('equipment-status').value,
         criticality: document.getElementById('equipment-criticality').value,
-        service_date: document.getElementById('equipment-service-date').value,
-        warranty_end: document.getElementById('equipment-warranty-end').value,
+        latitude: parseFloat(document.getElementById('equipment-lat').value),
+        longitude: parseFloat(document.getElementById('equipment-lng').value),
+        fibers_total: parseInt(document.getElementById('equipment-fibers-total').value) || null,
+        fibers_used: parseInt(document.getElementById('equipment-fibers-used').value) || 0,
+        connector: document.getElementById('equipment-connector').value,
+        location: document.getElementById('equipment-location').value,
+        service_date: document.getElementById('equipment-service-date').value || null,
+        warranty_end: document.getElementById('equipment-warranty-end').value || null,
         notes: document.getElementById('equipment-notes').value
     };
-    
-    console.log('📊 Données équipement:', formData);
-    
-    // Créer le marqueur temporaire sur la carte
-    const tempMarker = createTemporaryMarker(formData);
-    
-    // Sauvegarder en base de données
-    saveEquipmentToDB(formData, tempMarker);
-    
-    // Fermer le formulaire
-    closeEquipmentForm();
-    
-    // Désactiver le mode outil
-    deactivateToolMode();
-}
-function createTemporaryMarker(formData) {
-    const marker = L.marker(pendingEquipment.latlng, {
-        icon: L.divIcon({
-            html: `<div style="background: ${pendingEquipment.color}; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-                     <i class="${pendingEquipment.iconClass}" style="color: white; font-size: 12px;"></i>
-                   </div>`,
-            className: 'ftth-equipment-marker',
-            iconSize: [24, 24],
-            iconAnchor: [12, 12]
-        })
-    });
-    
-    // Stocker les données complètes
-    marker.equipmentData = {
-        ...formData,
-        id: Date.now(), // ID temporaire
-        latlng: pendingEquipment.latlng,
-        color: pendingEquipment.color,
-        iconClass: pendingEquipment.iconClass,
-        saved: false // Marqueur non sauvegardé
-    };
-    
-    // Popup temporaire
-    marker.bindPopup(`
-        <div style="text-align: center;">
-            <h4>${formData.name}</h4>
-            <p><strong>Type:</strong> ${formData.type}</p>
-            <p><strong>Statut:</strong> En cours de sauvegarde...</p>
-            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mx-auto mt-2"></div>
-        </div>
-    `);
-    
-    // Gestion des clics pour câblage
-    marker.on('click', function(e) {
-        if (currentToolMode === 'cable') {
-            e.originalEvent.stopPropagation();
-            marker.closePopup();
-            addEquipmentToCable(marker);
-            return false;
-        }
-    });
-    
-    drawingLayer.addLayer(marker);
-    return marker;
-}
 
-
-
-
-// Variables pour l'édition avancée
-let cableSegments = [];
-let currentSegment = null;
-let proximityAlerts = [];
-let snapDistance = 50; // Distance en mètres pour la détection
-
-function addCablePoint(latlng) {
-    // Vérifier la proximité avec des équipements existants
-    const nearbyEquipments = findNearbyEquipments(latlng, snapDistance);
-    
-    if (nearbyEquipments.length > 0 && !isPointNearExistingSegment(latlng)) {
-        showProximityAlert(latlng, nearbyEquipments);
+    // Validation
+    if (!formData.type || !formData.name || isNaN(formData.latitude) || isNaN(formData.longitude)) {
+        showNotification('Veuillez remplir tous les champs obligatoires (Type, Nom, Latitude, Longitude).', 'error');
         return;
     }
-    
-    // Si on a déjà un équipement sélectionné, on relie au point libre
-    if (cableEquipments.length === 1) {
-        const equipmentPoint = cableEquipments[0].equipmentData.latlng;
-        const points = [equipmentPoint, latlng];
-        
-        createCableSegment(points, {
-            startType: 'equipment',
-            startRef: cableEquipments[0].equipmentData.name,
-            endType: 'free',
-            endRef: 'Point libre'
-        });
-        
-        resetCableSelection();
-        return;
-    }
-    
-    // Logique de tracé libre avec segments
-    if (!currentSegment) {
-        // Démarrer un nouveau segment
-        currentSegment = {
-            points: [latlng],
-            startType: 'free',
-            endType: 'free',
-            id: Date.now()
-        };
-        
-        // Marqueur de départ
-        const startMarker = L.circleMarker(latlng, {
-            radius: 4,
-            color: '#7c3aed',
-            fillColor: '#7c3aed',
-            fillOpacity: 1
-        }).addTo(drawingLayer);
-        
-        console.log('🔌 Nouveau segment démarré - ID:', currentSegment.id);
-    } else {
-        // Continuer le segment actuel
-        currentSegment.points.push(latlng);
-        
-        // Redessiner la ligne
-        if (currentCableLine) {
-            drawingLayer.removeLayer(currentCableLine);
+
+    // Send to API
+    fetch('/api/ftth/equipment/create/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.error || 'Server error'); });
         }
-        
-        currentCableLine = L.polyline(currentSegment.points, {
-            color: '#7c3aed',
-            weight: 3,
-            opacity: 0.8
-        }).addTo(drawingLayer);
-        
-        // Popup d'édition du segment
-        const distance = calculateDistance(currentSegment.points);
-        
-        currentCableLine.bindPopup(`
-            <div>
-                <h4>📏 Segment ${currentSegment.id}</h4>
-                <p><strong>Points:</strong> ${currentSegment.points.length}</p>
-                <p><strong>Longueur:</strong> ${distance.toFixed(2)} m</p>
-                <div style="margin-top: 10px;">
-                    <button onclick="finalizeSegment()" style="background: #16a34a; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                        ✅ Finaliser
-                    </button>
-                    <button onclick="editSegment(${currentSegment.id})" style="background: #3b82f6; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                        ✏️ Éditer
-                    </button>
-                    <button onclick="continueSegment()" style="background: #f59e0b; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                        ➕ Continuer
-                    </button>
-                    <button onclick="cancelSegment()" style="background: #ef4444; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                        ❌ Annuler
-                    </button>
-                </div>
-            </div>
-        `);
-    }
-}
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Add to map
+            const equipmentData = {
+                id: data.asset_id,
+                name: formData.name,
+                reference: formData.reference,
+                type: formData.type,
+                brand: formData.brand,
+                model: formData.model,
+                status: formData.status,
+                criticality: formData.criticality,
+                coordinates: data.coordinates, // Use coordinates returned by backend
+                fibers_total: formData.fibers_total,
+                fibers_used: formData.fibers_used,
+                location: formData.location
+            };
 
-function findNearbyEquipments(latlng, maxDistance) {
-    const nearby = [];
-    
-    // Vérifier dans les équipements créés
-    if (drawingLayer) {
-        drawingLayer.eachLayer(function(layer) {
-            if (layer.equipmentData) {
-                const distance = latlng.distanceTo(layer.equipmentData.latlng);
-                if (distance <= maxDistance) {
-                    nearby.push({
-                        marker: layer,
-                        distance: distance,
-                        data: layer.equipmentData
-                    });
-                }
-            }
-        });
-    }
-    
-    // Vérifier dans les assets existants
-    if (assetsLayer) {
-        assetsLayer.eachLayer(function(layer) {
-            if (layer.feature && layer.feature.geometry) {
-                const coords = layer.feature.geometry.coordinates;
-                const assetLatLng = L.latLng(coords[1], coords[0]);
-                const distance = latlng.distanceTo(assetLatLng);
-                if (distance <= maxDistance) {
-                    nearby.push({
-                        marker: layer,
-                        distance: distance,
-                        data: layer.feature.properties
-                    });
-                }
-            }
-        });
-    }
-    
-    return nearby.sort((a, b) => a.distance - b.distance);
-}
+            addEquipmentToMap(equipmentData);
+            updateStats();
 
-function showProximityAlert(latlng, nearbyEquipments) {
-    const alertPopup = L.popup({
-        closeButton: false,
-        autoClose: false,
-        closeOnClick: false,
-        className: 'proximity-alert-popup'
-    });
-    
-    const nearestEquipment = nearbyEquipments[0];
-    
-    const alertContent = `
-        <div style="text-align: center; min-width: 200px;">
-            <h4 style="color: #f59e0b; margin: 0 0 10px 0;">
-                ⚠️ Équipement proche détecté !
-            </h4>
-            <p style="margin: 5px 0;">
-                <strong>${nearestEquipment.data.name || nearestEquipment.data.nom}</strong><br>
-                À ${nearestEquipment.distance.toFixed(1)} m
-            </p>
-            <div style="margin-top: 15px;">
-                <button onclick="snapToEquipment(${nearestEquipment.data.id || nearestEquipment.data.latitude}, ${nearestEquipment.data.longitude || nearestEquipment.data.longitude})" 
-                        style="background: #16a34a; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    🔌 Raccorder
-                </button>
-                <button onclick="ignoreProximity(${latlng.lat}, ${latlng.lng})" 
-                        style="background: #6b7280; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    ➡️ Ignorer
-                </button>
-            </div>
-        </div>
-    `;
-    
-    alertPopup.setLatLng(latlng).setContent(alertContent).openOn(map);
-    
-    // Stocker pour nettoyage
-    proximityAlerts.push(alertPopup);
-    
-    console.log(`⚠️ Alerte proximité: ${nearestEquipment.data.name || nearestEquipment.data.nom} à ${nearestEquipment.distance.toFixed(1)}m`);
-}
+            // Close form and reset
+            closeEquipmentForm();
+            document.getElementById('equipment-form').reset();
 
-function snapToEquipment(equipmentId, lng) {
-    // Fermer les alertes
-    proximityAlerts.forEach(popup => map.closePopup(popup));
-    proximityAlerts = [];
-    
-    // Trouver l'équipement et s'y raccorder
-    const equipment = findEquipmentById(equipmentId);
-    if (equipment) {
-        console.log('🔌 Raccordement automatique à:', equipment.name || equipment.nom);
-        
-        if (currentSegment && currentSegment.points.length > 0) {
-            // Finaliser le segment vers l'équipement
-            currentSegment.points.push(equipment.latlng);
-            currentSegment.endType = 'equipment';
-            currentSegment.endRef = equipment.name || equipment.nom;
-            
-            finalizeSegment();
+            showNotification(`Équipement ${formData.name} créé avec succès`, 'success');
+            console.log(`✅ Équipement créé: ${formData.name}`);
         } else {
-            // Créer un nouveau segment vers l'équipement
-            addEquipmentToCable(equipment.marker);
+            showNotification(`Erreur: ${data.error}`, 'error');
         }
-    }
+    })
+    .catch(error => {
+        console.error('Erreur création équipement:', error);
+        showNotification(`Erreur lors de la création de l'équipement: ${error.message}`, 'error');
+    });
 }
 
-function ignoreProximity(lat, lng) {
-    // Fermer les alertes et continuer normalement
-    proximityAlerts.forEach(popup => map.closePopup(popup));
-    proximityAlerts = [];
-    
-    const latlng = L.latLng(lat, lng);
-    
-    // Continuer le tracé normal
-    if (!currentSegment) {
-        currentSegment = {
-            points: [latlng],
-            startType: 'free',
-            endType: 'free',
-            id: Date.now()
-        };
-        
-        const startMarker = L.circleMarker(latlng, {
-            radius: 4,
-            color: '#7c3aed',
-            fillColor: '#7c3aed',
-            fillOpacity: 1
-        }).addTo(drawingLayer);
-    } else {
-        currentSegment.points.push(latlng);
-        
+function addCablePoint(lat, lng) {
+    const point = L.latLng(lat, lng);
+    cablePoints.push(point);
+
+    // Add a temporary marker
+    const marker = L.circleMarker(point, {
+        radius: 4,
+        fillColor: '#7c3aed',
+        color: 'white',
+        weight: 2,
+        fillOpacity: 0.8
+    }).addTo(drawingLayer);
+
+    // Draw the line between points
+    if (cablePoints.length > 1) {
+        // Remove old line
         if (currentCableLine) {
             drawingLayer.removeLayer(currentCableLine);
         }
-        
-        currentCableLine = L.polyline(currentSegment.points, {
+
+        // Create new line
+        currentCableLine = L.polyline(cablePoints, {
             color: '#7c3aed',
             weight: 3,
-            opacity: 0.8
+            opacity: 0.7,
+            dashArray: '5, 10'
         }).addTo(drawingLayer);
     }
-    
-    console.log('➡️ Proximité ignorée, tracé libre continué');
-}
 
-function isPointNearExistingSegment(latlng) {
-    // Vérifier si le point est près d'un segment existant
-    return cableSegments.some(segment => {
-        return segment.points.some(point => {
-            return latlng.distanceTo(point) < 10; // 10 mètres
-        });
-    });
-}
+    console.log(`📍 Point câble ajouté: ${cablePoints.length} points`);
 
-function findEquipmentById(id) {
-    // Chercher dans les équipements créés
-    let found = null;
-    
-    if (drawingLayer) {
-        drawingLayer.eachLayer(function(layer) {
-            if (layer.equipmentData && layer.equipmentData.id === id) {
-                found = {
-                    marker: layer,
-                    ...layer.equipmentData
-                };
-            }
-        });
+    if (cablePoints.length >= 2) {
+        showNotification(`${cablePoints.length} points ajoutés. Double-cliquez pour terminer le câble.`, 'info');
     }
-    
-    // Chercher dans les assets existants
-    if (!found && assetsLayer) {
-        assetsLayer.eachLayer(function(layer) {
-            if (layer.feature && layer.feature.properties && layer.feature.properties.id === id) {
-                const coords = layer.feature.geometry.coordinates;
-                found = {
-                    marker: layer,
-                    id: id,
-                    name: layer.feature.properties.nom,
-                    latlng: L.latLng(coords[1], coords[0])
-                };
-            }
-        });
-    }
-    
-    return found;
 }
-
-function createCableSegment(points, metadata) {
-    const segment = {
-        id: Date.now(),
-        points: points,
-        ...metadata,
-        distance: calculateDistance(points),
-        createdAt: new Date()
-    };
-    
-    const segmentLine = L.polyline(points, {
-        color: '#7c3aed',
-        weight: 3,
-        opacity: 0.8
-    }).addTo(drawingLayer);
-    
-    segmentLine.bindPopup(`
-        <div>
-            <h4>📏 Segment ${segment.id}</h4>
-            <p><strong>De:</strong> ${segment.startRef}</p>
-            <p><strong>Vers:</strong> ${segment.endRef}</p>
-            <p><strong>Longueur:</strong> ${segment.distance.toFixed(2)} m</p>
-            <div style="margin-top: 10px;">
-                <button onclick="editSegment(${segment.id})" style="background: #3b82f6; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    ✏️ Éditer
-                </button>
-                <button onclick="duplicateSegment(${segment.id})" style="background: #f59e0b; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    📋 Dupliquer
-                </button>
-                <button onclick="deleteSegment(${segment.id})" style="background: #ef4444; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    🗑️ Supprimer
-                </button>
-            </div>
-        </div>
-    `);
-    
-    segment.layer = segmentLine;
-    cableSegments.push(segment);
-    
-    console.log(`✅ Segment ${segment.id} créé: ${segment.startRef} → ${segment.endRef} (${segment.distance.toFixed(2)}m)`);
-    
-    return segment;
-}
-
-function finalizeSegment() {
-    if (!currentSegment) return;
-    
-    const segment = createCableSegment(currentSegment.points, {
-        startType: currentSegment.startType,
-        endType: currentSegment.endType,
-        startRef: currentSegment.startRef || 'Point libre',
-        endRef: currentSegment.endRef || 'Point libre'
-    });
-    
-    // Nettoyer
-    if (currentCableLine) {
-        drawingLayer.removeLayer(currentCableLine);
-    }
-    
-    currentSegment = null;
-    currentCableLine = null;
-    cablePoints = [];
-    
-    console.log('✅ Segment finalisé');
-}
-
-function editSegment(segmentId) {
-    const segment = cableSegments.find(s => s.id === segmentId);
-    if (!segment) return;
-    
-    console.log('✏️ Édition du segment:', segmentId);
-    
-    // Créer une interface d'édition
-    const editContent = `
-        <div style="min-width: 250px;">
-            <h4>✏️ Édition Segment ${segmentId}</h4>
-            <div style="margin: 10px 0;">
-                <label style="display: block; margin: 5px 0;">Nom du segment:</label>
-                <input type="text" id="segment-name-${segmentId}" value="Segment ${segmentId}" style="width: 100%; padding: 4px;">
-            </div>
-            <div style="margin: 10px 0;">
-                <label style="display: block; margin: 5px 0;">Type de câble:</label>
-                <select id="cable-type-${segmentId}" style="width: 100%; padding: 4px;">
-                    <option value="fibre">Fibre optique</option>
-                    <option value="coaxial">Coaxial</option>
-                    <option value="twisted">Paire torsadée</option>
-                </select>
-            </div>
-            <div style="margin: 10px 0;">
-                <label style="display: block; margin: 5px 0;">Nombre de fibres:</label>
-                <input type="number" id="fiber-count-${segmentId}" value="12" min="1" max="288" style="width: 100%; padding: 4px;">
-            </div>
-            <div style="margin: 15px 0;">
-                <button onclick="saveSegmentEdit(${segmentId})" style="background: #16a34a; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    💾 Sauvegarder
-                </button>
-                <button onclick="addSegmentPoint(${segmentId})" style="background: #3b82f6; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    ➕ Ajouter point
-                </button>
-                <button onclick="cancelSegmentEdit(${segmentId})" style="background: #6b7280; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    ❌ Annuler
-                </button>
-            </div>
-        </div>
-    `;
-    
-    segment.layer.bindPopup(editContent).openPopup();
-}
-
-function saveSegmentEdit(segmentId) {
-    const segment = cableSegments.find(s => s.id === segmentId);
-    if (!segment) return;
-    
-    const name = document.getElementById(`segment-name-${segmentId}`).value;
-    const cableType = document.getElementById(`cable-type-${segmentId}`).value;
-    const fiberCount = document.getElementById(`fiber-count-${segmentId}`).value;
-    
-    segment.name = name;
-    segment.cableType = cableType;
-    segment.fiberCount = parseInt(fiberCount);
-    
-    console.log('💾 Segment sauvegardé:', segment);
-    
-    // Mettre à jour la popup
-    segment.layer.bindPopup(`
-        <div>
-            <h4>📏 ${segment.name}</h4>
-            <p><strong>Type:</strong> ${segment.cableType}</p>
-            <p><strong>Fibres:</strong> ${segment.fiberCount}</p>
-            <p><strong>Longueur:</strong> ${segment.distance.toFixed(2)} m</p>
-            <div style="margin-top: 10px;">
-                <button onclick="editSegment(${segment.id})" style="background: #3b82f6; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    ✏️ Éditer
-                </button>
-                <button onclick="deleteSegment(${segment.id})" style="background: #ef4444; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    🗑️ Supprimer
-                </button>
-            </div>
-        </div>
-    `);
-}
-
-function addSegmentPoint(segmentId) {
-    const segment = cableSegments.find(s => s.id === segmentId);
-    if (!segment) return;
-    
-    console.log('➕ Mode ajout de point pour segment:', segmentId);
-    
-    // Activer le mode ajout de point
-    map.getContainer().style.cursor = 'copy';
-    
-    const onPointAdd = function(e) {
-        // Insérer le point au milieu du segment
-        const midIndex = Math.floor(segment.points.length / 2);
-        segment.points.splice(midIndex, 0, e.latlng);
-        
-        // Recalculer la distance
-        segment.distance = calculateDistance(segment.points);
-        
-        // Redessiner la ligne
-        segment.layer.setLatLngs(segment.points);
-        
-        // Nettoyer
-        map.getContainer().style.cursor = '';
-        map.off('click', onPointAdd);
-        
-        console.log('✅ Point ajouté au segment:', segmentId);
-    };
-    
-    map.on('click', onPointAdd);
-}
-
-function deleteSegment(segmentId) {
-    const segmentIndex = cableSegments.findIndex(s => s.id === segmentId);
-    if (segmentIndex === -1) return;
-    
-    const segment = cableSegments[segmentIndex];
-    
-    // Supprimer de la carte
-    if (segment.layer) {
-        drawingLayer.removeLayer(segment.layer);
-    }
-    
-    // Supprimer du tableau
-    cableSegments.splice(segmentIndex, 1);
-    
-    console.log('🗑️ Segment supprimé:', segmentId);
-}
-
-function continueSegment() {
-    if (currentCableLine) {
-        currentCableLine.closePopup();
-    }
-    console.log('➕ Continuez le tracé du segment');
-}
-
-function cancelSegment() {
-    if (currentCableLine) {
-        drawingLayer.removeLayer(currentCableLine);
-    }
-    currentSegment = null;
-    currentCableLine = null;
-    cablePoints = [];
-    console.log('❌ Segment annulé');
-}
-
-// Nouvelle fonction pour raccorder des équipements
-let cableEquipments = [];
 
 function addEquipmentToCable(equipmentMarker) {
-    // WORKFLOW 1: Si on a un segment en cours, on s'y connecte
-    if (currentSegment && currentSegment.points.length > 0) {
-        const equipmentPoint = equipmentMarker.equipmentData.latlng;
-        
-        // Finaliser le segment vers l'équipement
-        currentSegment.points.push(equipmentPoint);
-        currentSegment.endType = 'equipment';
-        currentSegment.endRef = equipmentMarker.equipmentData.name;
-        
-        // Créer le segment final
-        const segment = createCableSegment(currentSegment.points, {
-            startType: currentSegment.startType,
-            endType: 'equipment',
-            startRef: currentSegment.startRef || 'Point libre',
-            endRef: equipmentMarker.equipmentData.name
-        });
-        
-        // Nettoyer
-        if (currentCableLine) {
-            drawingLayer.removeLayer(currentCableLine);
-        }
-        
-        currentSegment = null;
-        currentCableLine = null;
-        cablePoints = [];
-        
-        console.log(`✅ Segment créé depuis tracé libre vers ${equipmentMarker.equipmentData.name}`);
-        return;
-    }
-    
-    // WORKFLOW 2: Si on a des points libres en cours (ancienne logique)
+    // If a free-drawn cable is in progress, connect it to this equipment
     if (cablePoints.length > 0) {
-        const lastPoint = cablePoints[cablePoints.length - 1];
-        const equipmentPoint = equipmentMarker.equipmentData.latlng;
-        
-        // Supprimer la ligne temporaire s'il y en a une
+        const equipmentPoint = equipmentMarker.equipmentData.coordinates;
+
+        // Remove temporary line
         if (currentCableLine) {
             drawingLayer.removeLayer(currentCableLine);
         }
-        
-        // Créer le segment final vers l'équipement
-        const finalPoints = [...cablePoints, equipmentPoint];
-        const segment = createCableSegment(finalPoints, {
+
+        // Create the final segment to the equipment
+        const finalPoints = [...cablePoints.map(p => [p.lat, p.lng]), [equipmentPoint.lat, equipmentPoint.lng]];
+        createCableSegment(finalPoints, {
             startType: 'free',
             endType: 'equipment',
             startRef: 'Point libre',
-            endRef: equipmentMarker.equipmentData.name
+            endRef: equipmentMarker.equipmentData.name,
+            startId: null, // No ID for free point
+            endId: equipmentMarker.equipmentData.id
         });
-        
+
         console.log(`✅ Câble créé depuis tracé libre vers ${equipmentMarker.equipmentData.name}`);
-        
-        // Réinitialiser
-        cablePoints = [];
-        currentCableLine = null;
+
+        // Reset
+        resetDrawingState();
+        showNotification(`Câble connecté de point libre à ${equipmentMarker.equipmentData.name}`, 'success');
         return;
     }
-    
-    // WORKFLOW 3: Logique équipement → équipement (existante)
+
+    // Logic for equipment → equipment connection
     cableEquipments.push(equipmentMarker);
-    
-    // Changer l'apparence pour montrer la sélection
+
+    // Change appearance to show selection
     const equipment = equipmentMarker.equipmentData;
+    const config = equipmentConfig[equipment.type] || equipmentConfig['PTO'];
+
     equipmentMarker.setIcon(L.divIcon({
-        html: `<div style="background: ${equipment.color}; border: 4px solid #3b82f6; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-                 <i class="${equipment.iconClass || 'fas fa-server'}" style="color: white; font-size: 12px;"></i>
+        html: `<div style="background: ${getStatusColor(equipment.status)}; border: 4px solid #3b82f6; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                 <i class="${config.iconClass}" style="color: white; font-size: 12px;"></i>
                </div>`,
         className: 'ftth-equipment-marker-selected',
         iconSize: [28, 28],
         iconAnchor: [14, 14]
     }));
-    
-    // Fermer la popup si elle est ouverte
+
+    // Close popup if open
     if (equipmentMarker.isPopupOpen()) {
         equipmentMarker.closePopup();
     }
-    
-    console.log(`📡 Équipement ${equipment.type || equipment.name} sélectionné (${cableEquipments.length})`);
-    
+
+    console.log(`📡 Équipement ${equipment.name} sélectionné (${cableEquipments.length})`);
+
     if (cableEquipments.length === 1) {
-        console.log('👆 Cliquez sur un autre équipement pour créer le câble');
+        showNotification('Cliquez sur un autre équipement pour créer le câble', 'info');
     } else if (cableEquipments.length >= 2) {
         createCableBetweenEquipments();
     }
@@ -1247,276 +1079,497 @@ function addEquipmentToCable(equipmentMarker) {
 
 function createCableBetweenEquipments() {
     if (cableEquipments.length < 2) return;
-    
-    // Créer la ligne entre tous les équipements sélectionnés
-    const points = cableEquipments.map(marker => marker.equipmentData.latlng);
-    
-    const segment = createCableSegment(points, {
+
+    // Create line between all selected equipments
+    const points = cableEquipments.map(marker => {
+        const coords = marker.equipmentData.coordinates;
+        return [coords.lat, coords.lng];
+    });
+
+    createCableSegment(points, {
         startType: 'equipment',
         endType: 'equipment',
         startRef: cableEquipments[0].equipmentData.name,
-        endRef: cableEquipments[cableEquipments.length - 1].equipmentData.name
+        endRef: cableEquipments[cableEquipments.length - 1].equipmentData.name,
+        startId: cableEquipments[0].equipmentData.id,
+        endId: cableEquipments[cableEquipments.length - 1].equipmentData.id
     });
-    
+
     console.log(`✅ Câble créé entre ${cableEquipments.length} équipements`);
-    
-    // Réinitialiser
+    showNotification(`Câble créé entre ${cableEquipments[0].equipmentData.name} et ${cableEquipments[cableEquipments.length - 1].equipmentData.name}`, 'success');
+
+    // Reset
+    resetCableSelection();
+}
+
+function createCableSegment(points, metadata) {
+    // Create line on the map
+    const line = L.polyline(points, {
+        color: '#7c3aed',
+        weight: 4,
+        opacity: 0.8
+    }).addTo(drawingLayer);
+
+    // Calculate distance
+    let totalDistance = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+        const point1 = L.latLng(points[i][0], points[i][1]);
+        const point2 = L.latLng(points[i + 1][0], points[i + 1][1]);
+        totalDistance += point1.distanceTo(point2);
+    }
+
+    // Popup for the cable
+    const popupContent = `
+        <div class="text-sm">
+            <h4 class="font-bold mb-2">Câble FTTH</h4>
+            <div><strong>De:</strong> ${metadata.startRef}</div>
+            <div><strong>Vers:</strong> ${metadata.endRef}</div>
+            <div><strong>Distance:</strong> ${Math.round(totalDistance)}m</div>
+            <div class="mt-2">
+                <button onclick="deleteCable(${cables.length})" class="bg-red-600 text-white px-2 py-1 rounded text-xs">
+                    <i class="fas fa-trash mr-1"></i>Supprimer
+                </button>
+            </div>
+        </div>
+    `;
+
+    line.bindPopup(popupContent);
+
+    // Save to database
+    saveCableToDatabase(points, metadata, totalDistance);
+
+    // Add to cable list (store index for deletion)
+    cables.push({
+        line: line,
+        points: points,
+        metadata: metadata,
+        distance: totalDistance
+    });
+
+    // Update stats
+    updateStats();
+}
+
+function saveCableToDatabase(points, metadata, distance) {
+    const cableData = {
+        points: points.map(p => ({ lat: p[0], lng: p[1] })),
+        start_asset_id: metadata.startId || null,
+        end_asset_id: metadata.endId || null,
+        start_ref: metadata.startRef,
+        end_ref: metadata.endRef,
+        distance: Math.round(distance),
+        name: `Câble ${metadata.startRef} - ${metadata.endRef}`,
+        fiber_count: 12, // Default value, can be made dynamic
+        cable_type: 'LC' // Default value, can be made dynamic
+    };
+
+    fetch('/api/ftth/cable/create/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(cableData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.error || 'Server error'); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log(`💾 Câble sauvegardé: ID ${data.cable_id}`);
+            // Optionally, update the local cable object with the backend ID
+            // This might require a more sophisticated way to match local cables to backend ones
+        } else {
+            console.error('Erreur sauvegarde câble:', data.error);
+            showNotification(`Erreur lors de la sauvegarde du câble: ${data.error}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur sauvegarde câble:', error);
+        showNotification(`Erreur lors de la sauvegarde du câble: ${error.message}`, 'error');
+    });
+}
+
+function addMeasurePoint(lat, lng) {
+    const point = L.latLng(lat, lng);
+    measurePoints.push(point);
+
+    // Add a marker
+    const marker = L.circleMarker(point, {
+        radius: 5,
+        fillColor: '#ef4444',
+        color: 'white',
+        weight: 2,
+        fillOpacity: 1
+    }).addTo(drawingLayer);
+
+    if (measurePoints.length === 2) {
+        // Calculate and display distance
+        const distance = measurePoints[0].distanceTo(measurePoints[1]);
+
+        // Measurement line
+        const line = L.polyline(measurePoints, {
+            color: '#ef4444',
+            weight: 3,
+            dashArray: '10, 5',
+            className: 'distance-line'
+        }).addTo(drawingLayer);
+
+        // Popup with distance
+        const midpoint = L.latLng(
+            (measurePoints[0].lat + measurePoints[1].lat) / 2,
+            (measurePoints[0].lng + measurePoints[1].lng) / 2
+        );
+
+        const popup = L.popup()
+            .setLatLng(midpoint)
+            .setContent(`
+                <div class="text-center">
+                    <div class="font-bold text-lg">${Math.round(distance)}m</div>
+                    <div class="text-sm text-gray-600">Distance mesurée</div>
+                    <button onclick="clearMeasure()" class="mt-2 bg-red-600 text-white px-2 py-1 rounded text-xs">
+                        Effacer
+                    </button>
+                </div>
+            `)
+            .openOn(map);
+
+        showNotification(`Distance mesurée: ${Math.round(distance)}m`, 'success');
+
+        // Reset for the next measurement
+        measurePoints = [];
+    } else if (measurePoints.length === 1) {
+        showNotification('Cliquez une deuxième fois pour mesurer la distance.', 'info');
+    }
+}
+
+function resetDrawingState() {
+    currentSegment = null;
+    // Remove any temporary cable line being drawn
+    if (currentCableLine) {
+        drawingLayer.removeLayer(currentCableLine);
+        currentCableLine = null;
+    }
+    // Remove temporary cable points markers
+    drawingLayer.eachLayer(layer => {
+        if (layer instanceof L.CircleMarker && layer.options.fillColor === '#7c3aed') {
+            drawingLayer.removeLayer(layer);
+        }
+    });
+    cablePoints = [];
+    measurePoints = []; // Clear measure points on tool change
     resetCableSelection();
 }
 
 function resetCableSelection() {
-    // Remettre l'apparence normale des équipements
+    // Revert equipment appearance to normal
     cableEquipments.forEach(marker => {
         const equipment = marker.equipmentData;
+        const config = equipmentConfig[equipment.type] || equipmentConfig['PTO'];
+
         marker.setIcon(L.divIcon({
-            html: `<div style="background: ${equipment.color}; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-                     <i class="${equipment.iconClass || 'fas fa-server'}" style="color: white; font-size: 12px;"></i>
+            html: `<div style="background: ${getStatusColor(equipment.status)}; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                     <i class="${config.iconClass}" style="color: white; font-size: 12px;"></i>
                    </div>`,
             className: 'ftth-equipment-marker',
             iconSize: [24, 24],
             iconAnchor: [12, 12]
         }));
     });
-    
-    // Réinitialiser toutes les variables
+
+    // Reset the list
     cableEquipments = [];
-    cablePoints = [];
-    currentCableLine = null;
-}
-
-// Gestion des popups d'équipements selon le mode
-function disableEquipmentPopups() {
-    console.log('🚫 Désactivation des popups en mode câble');
-    
-    // Désactiver les popups des assets existants
-    if (assetsLayer) {
-        assetsLayer.eachLayer(function(layer) {
-            layer.closePopup();
-            layer.off('click');
-            layer.on('click', function(e) {
-                if (currentToolMode === 'cable') {
-                    e.originalEvent.stopPropagation();
-                    e.preventDefault();
-                    console.log('🔌 Asset existant sélectionné pour câblage');
-                    return false;
-                }
-            });
-        });
-    }
-    
-    // Désactiver les popups des nouveaux équipements
-    if (drawingLayer) {
-        drawingLayer.eachLayer(function(layer) {
-            if (layer.equipmentData) {
-                layer.closePopup();
-                // Marquer comme désactivé pour les popups
-                layer._popupWasDisabled = true;
-            }
-        });
-    }
-}
-
-function enableEquipmentPopups() {
-    console.log('✅ Réactivation des popups - mode normal');
-    
-    // Réactiver les popups des assets existants
-    if (assetsLayer) {
-        assetsLayer.eachLayer(function(layer) {
-            layer.off('click');
-            layer.on('click', function() {
-                if (currentToolMode !== 'cable' && layer.feature && layer.feature.properties && layer.feature.properties.id) {
-                    showDetails(layer.feature.properties.id);
-                }
-            });
-        });
-    }
-    
-    // Les nouveaux équipements gardent leur gestion intelligente dans createEquipmentFromForm
-}
-
-function measureDistance(latlng) {
-    measurePoints.push(latlng);
-    
-    if (measurePoints.length === 1) {
-        const startMarker = L.circleMarker(latlng, {
-            radius: 3,
-            color: '#6b7280',
-            fillColor: '#6b7280',
-            fillOpacity: 1
-        }).addTo(drawingLayer);
-    } else if (measurePoints.length === 2) {
-        const distance = calculateDistance(measurePoints);
-        
-        const measureLine = L.polyline(measurePoints, {
-            color: '#6b7280',
-            weight: 2,
-            dashArray: '5, 5'
-        }).addTo(drawingLayer);
-        
-        measureLine.bindPopup(`Distance: ${distance.toFixed(2)} m`).openPopup();
-        
-        measurePoints = [];
-        deactivateToolMode();
-    }
-}
-
-function calculateDistance(points) {
-    let totalDistance = 0;
-    for (let i = 1; i < points.length; i++) {
-        totalDistance += points[i-1].distanceTo(points[i]);
-    }
-    return totalDistance;
-}
-
-function finalizeCable() {
-    console.log('Câble finalisé:', cablePoints);
-    cablePoints = [];
-    currentCableLine = null;
-    deactivateToolMode();
 }
 
 function clearDrawings() {
-    if (drawingLayer) {
-        drawingLayer.clearLayers();
+    if (confirm('Êtes-vous sûr de vouloir effacer tous les dessins (câbles et mesures) ? Cela ne supprimera pas les équipements existants.')) {
+        // Remove only cables and measurement lines/markers from the drawing layer
+        drawingLayer.eachLayer(layer => {
+            // Check if it's a cable (polyline with specific color/weight) or measurement element
+            if ((layer instanceof L.Polyline && layer.options.color === '#7c3aed') || // Cables
+                (layer instanceof L.Polyline && layer.options.dashArray === '10, 5') || // Measurement lines
+                (layer instanceof L.CircleMarker && layer.options.fillColor === '#ef4444') || // Measurement points
+                (layer instanceof L.CircleMarker && layer.options.fillColor === '#7c3aed')) { // Temporary cable points
+                drawingLayer.removeLayer(layer);
+            }
+            // Do NOT remove equipment markers here as they are handled by loadExistingEquipments
+        });
+
+        resetDrawingState();
+        cables = []; // Clear the cables array
+        // Re-load equipments to ensure only valid equipments are on the map
+        loadExistingEquipments();
+        updateStats();
+        showNotification('Tous les dessins ont été effacés', 'success');
     }
-    cablePoints = [];
-    measurePoints = [];
-    currentCableLine = null;
-    cableEquipments = [];
-    deactivateToolMode();
 }
 
-function deactivateToolMode() {
-    currentToolMode = null;
-    if (map) {
-        map.getContainer().style.cursor = '';
-        map.off('click', onMapClick);
-    }
-    document.querySelectorAll('.ftth-tool-btn').forEach(btn => btn.classList.remove('active'));
-    
-    // Réactiver les popups normales
-    enableEquipmentPopups();
-    resetCableSelection();
-}
-
-// Fonctions de sauvegarde (à implémenter côté Django)
-function saveEquipmentToDB(formData, tempMarker) {
-    const equipmentData = {
-        type: formData.type,
-        name: formData.name,
-        reference: formData.reference || formData.name,
-        brand: formData.brand,
-        model: formData.model,
-        latitude: formData.latitude,
-        longitude: formData.longitude,
-        status: formData.status,
-        criticality: formData.criticality,
-        address: formData.location,
-        fibers: parseInt(formData.fibers_total) || null,
-        fibers_used: parseInt(formData.fibers_used) || 0,
-        connector: formData.connector,
-        service_date: formData.service_date,
-        warranty_end: formData.warranty_end,
-        notes: formData.notes
-    };
-    
-    console.log('💾 Sauvegarde en cours...', equipmentData);
-    
-    // Appel AJAX vers Django
-    fetch('/api/ftth/equipment/create/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify(equipmentData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Sauvegarde réussie
-            console.log('✅ Équipement sauvegardé:', data);
-            
-            // Mettre à jour le marqueur
-            tempMarker.equipmentData.id = data.asset_id;
-            tempMarker.equipmentData.saved = true;
-            
-            // Mettre à jour la popup
-            updateEquipmentPopup(tempMarker, formData, data.asset_id);
-            
-            // Notification de succès
-            showNotification('success', `Équipement ${formData.name} créé avec succès`);
-            
-        } else {
-            // Erreur de sauvegarde
-            console.error('❌ Erreur sauvegarde:', data.error);
-            showNotification('error', `Erreur: ${data.error}`);
-            
-            // Marquer comme erreur
-            tempMarker.equipmentData.saved = false;
-            tempMarker.equipmentData.error = data.error;
-            
-            // Popup d'erreur
-            tempMarker.bindPopup(`
-                <div style="text-align: center;">
-                    <h4>${formData.name}</h4>
-                    <p style="color: red;"><strong>Erreur:</strong> ${data.error}</p>
-                    <div style="margin-top: 8px;">
-                        <button onclick="retryEquipmentSave(${tempMarker.equipmentData.id})" style="background: #f59e0b; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                            🔄 Réessayer
-                        </button>
-                        <button onclick="deleteTemporaryEquipment(${tempMarker.equipmentData.id})" style="background: #ef4444; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                            🗑️ Supprimer
-                        </button>
-                    </div>
-                </div>
-            `);
+function clearMeasure() {
+    // Effacer les éléments de mesure de la dernière mesure
+    drawingLayer.eachLayer(layer => {
+        if (layer instanceof L.CircleMarker && layer.options.fillColor === '#ef4444') {
+            drawingLayer.removeLayer(layer);
         }
-    })
-    .catch(error => {
-        console.error('❌ Erreur réseau:', error);
-        showNotification('error', 'Erreur de connexion au serveur');
-        
-        tempMarker.equipmentData.saved = false;
-        tempMarker.equipmentData.error = 'Erreur réseau';
-        
-        tempMarker.bindPopup(`
-            <div style="text-align: center;">
-                <h4>${formData.name}</h4>
-                <p style="color: red;"><strong>Erreur réseau</strong></p>
-                <button onclick="retryEquipmentSave(${tempMarker.equipmentData.id})" style="background: #f59e0b; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer;">
-                    🔄 Réessayer
-                </button>
-            </div>
-        `);
+        if (layer instanceof L.Polyline && layer.options.dashArray === '10, 5') {
+            drawingLayer.removeLayer(layer);
+        }
     });
+
+    map.closePopup();
+    measurePoints = [];
+    showNotification('Mesure effacée.', 'info');
 }
 
-function updateEquipmentPopup(marker, formData, assetId) {
-    const fibersInfo = formData.fibers_total ? 
-        `<p><strong>Fibres:</strong> ${formData.fibers_used || 0}/${formData.fibers_total}</p>` : '';
-    
-    const popup = `
-        <div style="text-align: center;">
-            <h4>${formData.name}</h4>
-            <p><strong>Type:</strong> ${formData.type}</p>
-            <p><strong>Statut:</strong> ${formData.status}</p>
-            ${fibersInfo}
-            <div style="margin-top: 8px;">
-                <button onclick="editEquipment(${assetId})" style="background: #3b82f6; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    ✏️ Modifier
-                </button>
-                <button onclick="deleteEquipment(${assetId})" style="background: #ef4444; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    🗑️ Supprimer
-                </button>
-            </div>
-        </div>
+function saveCurrentWork() {
+    // This function can be expanded to save current map state or new drawings if not already persisted
+    // For now, it's just a notification as equipment and cable creation already persist to DB.
+    showNotification('Le travail est automatiquement sauvegardé lors de la création d\'équipements et de câbles.', 'info');
+    console.log('💾 Travail sauvegardé: Les créations sont persistées.');
+}
+
+function updateStats() {
+    stats.total = equipments.length;
+    stats.en_service = equipments.filter(e => e.data.status === 'EN_SERVICE').length;
+    stats.en_panne = equipments.filter(e => e.data.status === 'EN_PANNE').length;
+    stats.en_maintenance = equipments.filter(e => e.data.status === 'EN_MAINTENANCE').length;
+    stats.cables = cables.length;
+
+    document.getElementById('stat-total').textContent = stats.total;
+    document.getElementById('stat-service').textContent = stats.en_service;
+    document.getElementById('stat-panne').textContent = stats.en_panne;
+    document.getElementById('stat-maintenance').textContent = stats.en_maintenance;
+    document.getElementById('stat-cables').textContent = stats.cables;
+}
+
+function performSearch() {
+    const query = document.getElementById('search-input').value.trim();
+    const resultsContainer = document.getElementById('search-results');
+
+    if (query.length < 2) {
+        resultsContainer.classList.add('hidden');
+        resultsContainer.innerHTML = ''; // Clear previous results
+        return;
+    }
+
+    fetch(`/api/assets/search/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.results && data.results.length > 0) {
+                let html = '';
+                data.results.slice(0, 5).forEach(asset => {
+                    html += `
+                        <div class="p-3 hover:bg-gray-50 cursor-pointer border-b" onclick="focusOnAsset(${asset.latitude}, ${asset.longitude})">
+                            <div class="font-medium">${asset.nom}</div>
+                            <div class="text-sm text-gray-600">${asset.reference || 'Pas de référence'}</div>
+                            <div class="text-xs text-gray-500">${asset.categorie}</div>
+                        </div>
+                    `;
+                });
+                resultsContainer.innerHTML = html;
+                resultsContainer.classList.remove('hidden');
+            } else {
+                resultsContainer.innerHTML = '<div class="p-3 text-gray-500">Aucun résultat trouvé</div>';
+                resultsContainer.classList.remove('hidden');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur recherche:', error);
+            resultsContainer.classList.add('hidden');
+            showNotification('Erreur lors de la recherche des assets.', 'error');
+        });
+}
+
+function focusOnAsset(lat, lng) {
+    map.setView([lat, lng], 16);
+    document.getElementById('search-results').classList.add('hidden');
+    document.getElementById('search-input').value = '';
+    showNotification('Asset localisé sur la carte', 'success');
+
+    // Optionally highlight the asset if it's already on the map
+    const targetEquipment = equipments.find(e => e.data.coordinates.lat === lat && e.data.coordinates.lng === lng);
+    if (targetEquipment) {
+        targetEquipment.marker.openPopup();
+        // Add a temporary animation class if needed
+        targetEquipment.marker._icon.classList.add('ftth-equipment-marker-selected');
+        setTimeout(() => {
+            targetEquipment.marker._icon.classList.remove('ftth-equipment-marker-selected');
+        }, 3000); // Remove highlight after 3 seconds
+    }
+}
+
+function centrerSurAssets() {
+    if (equipments.length === 0) {
+        showNotification('Aucun équipement à centrer', 'warning');
+        return;
+    }
+
+    const group = new L.featureGroup(equipments.map(e => e.marker));
+    map.fitBounds(group.getBounds().pad(0.1));
+    showNotification(`Vue centrée sur ${equipments.length} équipements`, 'success');
+}
+
+function refreshMap() {
+    // Clear the drawing layer completely before reloading to avoid duplicates
+    drawingLayer.clearLayers();
+    equipments.length = 0; // Reset local equipments array
+    cables.length = 0; // Reset local cables array
+
+    loadExistingEquipments(); // This will repopulate `equipments` and `drawingLayer`
+    showNotification('Carte actualisée', 'success');
+}
+
+function editEquipment(assetId) {
+    showNotification('Fonction d\'édition en cours de développement', 'warning');
+    // In a real application, you'd fetch the equipment details by assetId,
+    // populate the equipment form with those details, and change the form's
+    // submit action to an update API call instead of create.
+    // openEquipmentForm(lat, lng, type) could be reused with pre-filled values.
+}
+
+function deleteEquipment(assetId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet équipement ?')) {
+        fetch(`/api/ftth/equipment/${assetId}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.error || 'Server error'); });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Remove from map and local array
+                const equipmentIndex = equipments.findIndex(e => e.data.id === assetId);
+                if (equipmentIndex !== -1) {
+                    drawingLayer.removeLayer(equipments[equipmentIndex].marker);
+                    equipments.splice(equipmentIndex, 1);
+                }
+
+                // Also remove any cables connected to this equipment (client-side only for now, backend should handle cascading)
+                cables = cables.filter(cable => {
+                    const isConnected = (cable.metadata.startId === assetId || cable.metadata.endId === assetId);
+                    if (isConnected) {
+                        drawingLayer.removeLayer(cable.line);
+                    }
+                    return !isConnected;
+                });
+
+
+                updateStats();
+                showNotification(data.message, 'success');
+                map.closePopup();
+                closeSidebar(); // Close sidebar if it was showing details of deleted asset
+            } else {
+                showNotification(`Erreur: ${data.error}`, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur suppression:', error);
+            showNotification(`Erreur lors de la suppression: ${error.message}`, 'error');
+        });
+    }
+}
+
+function deleteCable(cableIndex) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce câble ?')) {
+        if (cableIndex >= 0 && cableIndex < cables.length) {
+            const cableToDelete = cables[cableIndex];
+
+            // In a real app, you'd send a DELETE request to your backend for the cable's ID
+            // For now, it's just client-side removal
+            // fetch(`/api/ftth/cable/${cableToDelete.id}/delete/`, { ... })
+
+            drawingLayer.removeLayer(cableToDelete.line);
+            cables.splice(cableIndex, 1); // Remove from array
+            updateStats();
+            map.closePopup();
+            showNotification('Câble supprimé', 'success');
+
+            // Re-index deleteCable buttons in popups if needed (more complex, consider using unique IDs)
+        }
+    }
+}
+
+// Sidebar management functions
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('translate-x-full');
+    // Ensure form sidebar is closed if main sidebar is opened
+    closeEquipmentForm();
+}
+
+function closeSidebar() {
+    document.getElementById('sidebar').classList.add('translate-x-full');
+}
+
+function closeEquipmentForm() {
+    document.getElementById('equipment-form-sidebar').classList.add('translate-x-full');
+    resetDrawingState(); // Ensure drawing state is cleared when closing form
+    // Also deactivate the tool if it was a placement tool
+    if (currentTool && ['nro', 'pm', 'pb', 'pto'].includes(currentTool)) {
+        document.querySelector(`[data-tool="${currentTool}"]`)?.classList.remove('active');
+        currentTool = null;
+        map.getContainer().style.cursor = '';
+        document.getElementById('current-mode').textContent = 'Sélection';
+    }
+}
+
+// Notification system
+function showNotification(message, type = 'info') {
+    const container = document.getElementById('notification-container');
+    const notification = document.createElement('div');
+
+    const bgColors = {
+        'success': 'bg-green-500',
+        'error': 'bg-red-500',
+        'warning': 'bg-yellow-500',
+        'info': 'bg-blue-500'
+    };
+
+    const icons = {
+        'success': 'fas fa-check-circle',
+        'error': 'fas fa-exclamation-triangle',
+        'warning': 'fas fa-exclamation-circle',
+        'info': 'fas fa-info-circle'
+    };
+
+    notification.className = `${bgColors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 transform transition-all duration-300 translate-x-full opacity-0`;
+    notification.innerHTML = `
+        <i class="${icons[type]}"></i>
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()" class="ml-2 text-white hover:text-gray-200">
+            <i class="fas fa-times"></i>
+        </button>
     `;
-    
-    marker.bindPopup(popup);
+
+    container.appendChild(notification);
+
+    // Entry animation
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full', 'opacity-0');
+    }, 100);
+
+    // Automatic removal after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.classList.add('translate-x-full', 'opacity-0');
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300);
+        }
+    }, 5000);
 }
 
-// Fonction pour récupérer le token CSRF Django
+// Utility function to get CSRF token
 function getCsrfToken() {
     const cookies = document.cookie.split(';');
     for (let cookie of cookies) {
@@ -1528,199 +1581,263 @@ function getCsrfToken() {
     return '';
 }
 
-// Système de notifications
-function showNotification(type, message) {
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 px-4 py-3 rounded-lg shadow-lg z-50 ${
-        type === 'success' ? 'bg-green-500 text-white' : 
-        type === 'error' ? 'bg-red-500 text-white' : 
-        'bg-blue-500 text-white'
-    }`;
-    notification.innerHTML = `
-        <div class="flex items-center">
-            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'} mr-2"></i>
-            <span>${message}</span>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 5000);
-}
-
-
-
-// Fonctions utilitaires
-function retryEquipmentSave(equipmentId) {
-    // Retrouver le marqueur et réessayer la sauvegarde
-    drawingLayer.eachLayer(function(layer) {
-        if (layer.equipmentData && layer.equipmentData.id === equipmentId) {
-            saveEquipmentToDB(layer.equipmentData, layer);
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Escape to cancel current tool
+    if (e.key === 'Escape') {
+        if (currentTool) {
+            document.querySelector(`[data-tool="${currentTool}"]`)?.classList.remove('active');
+            currentTool = null;
+            resetDrawingState();
+            map.getContainer().style.cursor = '';
+            document.getElementById('current-mode').textContent = 'Sélection';
+            showNotification('Outil désactivé', 'info');
+        } else if (document.getElementById('sidebar').classList.contains('translate-x-full') === false) {
+            // If sidebar is open, close it
+            closeSidebar();
+        } else if (document.getElementById('equipment-form-sidebar').classList.contains('translate-x-full') === false) {
+            // If equipment form is open, close it
+            closeEquipmentForm();
         }
-    });
-}
-
-function deleteTemporaryEquipment(equipmentId) {
-    drawingLayer.eachLayer(function(layer) {
-        if (layer.equipmentData && layer.equipmentData.id === equipmentId) {
-            drawingLayer.removeLayer(layer);
-            console.log('🗑️ Équipement temporaire supprimé');
-        }
-    });
-}
-
-function editEquipment(assetId) {
-    // TODO: Implémenter l'édition
-    console.log('✏️ Édition équipement:', assetId);
-    alert(`Édition équipement ID: ${assetId}`);
-}
-
-function deleteEquipment(assetId) {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet équipement ?')) {
-        return;
     }
-    
-    fetch(`/api/ftth/equipment/${assetId}/delete/`, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRFToken': getCsrfToken()
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification('success', data.message);
-            
-            // Supprimer de la carte
-            drawingLayer.eachLayer(function(layer) {
-                if (layer.equipmentData && layer.equipmentData.id === assetId) {
-                    drawingLayer.removeLayer(layer);
-                }
-            });
-        } else {
-            showNotification('error', data.error);
-        }
-    })
-}
 
-function saveCableToDB() {
-    console.log('💾 Sauvegarde câble en base');
-    // TODO: Appel AJAX vers Django pour créer le câble
-    alert('Câble à sauvegarder en base de données');
-}
-
-function removeTemporaryEquipment(equipmentId) {
-    console.log('🗑️ Suppression équipement temporaire:', equipmentId);
-    // Logique de suppression
-}
-
-function removeCable() {
-    console.log('🗑️ Suppression câble');
-    // Logique de suppression
-}
-
-// Sidebar
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar) {
-        sidebar.classList.toggle('translate-x-full');
+    // Ctrl+Z for undo last cable drawing action
+    if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        undoLastAction();
     }
-}
 
-function closeSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar) {
-        sidebar.classList.add('translate-x-full');
+    // Delete key to clear drawings
+    if (e.key === 'Delete') {
+        clearDrawings();
     }
-}
+});
 
-function showDetails(assetId) {
-    if (!assetId) return;
-    
-    const content = document.getElementById('sidebar-content');
-    if (!content) return;
-    
-       const asset = findAssetById(assetId);
-
-        if (asset) {
-            // Vérifie si point_geojson est un objet ou une chaîne JSON
-            let point = null;
-
-            try {
-                point = typeof asset.point_geojson === 'string'
-                    ? JSON.parse(asset.point_geojson)
-                    : asset.point_geojson;
-                    console.log(point);
-                    console.log(asset);
-            } catch (e) {
-                console.warn("Erreur lors du parsing de point_geojson:", e);
+function undoLastAction() {
+    if (cablePoints.length > 0) {
+        // Remove the last point and its marker for free-drawn cable
+        cablePoints.pop();
+        // Remove the last circle marker added for cable points (assuming it's the last one in drawingLayer)
+        const layers = drawingLayer.getLayers();
+        for (let i = layers.length - 1; i >= 0; i--) {
+            if (layers[i] instanceof L.CircleMarker && layers[i].options.fillColor === '#7c3aed') {
+                drawingLayer.removeLayer(layers[i]);
+                break; // Only remove the last one
             }
-
-            const coordinatesText = point?.type === 'Point' && Array.isArray(point.coordinates)
-                ? `${point.coordinates[1]}, ${point.coordinates[0]}` // lat, lon
-                : 'N/A';
-
-            content.innerHTML = `
-                <div>
-                    <h3 class="text-lg font-bold mb-2">${asset.nom || 'Asset'}</h3>
-                    <div class="space-y-2 text-sm">
-                        <p><strong>Référence:</strong> ${asset.reference || 'N/A'}</p>
-                        <p><strong>Catégorie:</strong> ${asset.categorie || 'N/A'}</p>
-                        <p><strong>Statut:</strong> ${asset.statut || 'N/A'}</p>
-                        <p><strong>Localisation:</strong> ${coordinatesText}</p>
-                    </div>
-                </div>
-            `;
-        } else {
-            content.innerHTML = '<p class="text-red-500">Asset non trouvé</p>';
         }
-    
-    toggleSidebar();
-}
 
-function findAssetById(id) {
-    if (!assetsData || !assetsData.features) return null;
-    
-    const feature = assetsData.features.find(f => 
-        f.properties && f.properties.id == id
-    );
-    
-    return feature ? feature.properties : null;
-}
-
-function centrerSurAssets() {
-    if (!assetsData || !assetsData.features || assetsData.features.length === 0) {
-        return;
+        if (currentCableLine) {
+            drawingLayer.removeLayer(currentCableLine);
+            currentCableLine = null;
+        }
+        if (cablePoints.length > 1) {
+            currentCableLine = L.polyline(cablePoints, {
+                color: '#7c3aed',
+                weight: 3,
+                opacity: 0.7,
+                dashArray: '5, 10'
+            }).addTo(drawingLayer);
+        }
+        showNotification('Dernier point du câble supprimé', 'info');
+    } else if (cables.length > 0) {
+        // Remove the last created cable
+        const lastCable = cables.pop();
+        drawingLayer.removeLayer(lastCable.line);
+        // TODO: In a real app, send a DELETE request to backend for this cable
+        updateStats();
+        showNotification('Dernier câble supprimé', 'info');
+    } else {
+        showNotification('Aucune action à annuler', 'warning');
     }
-    
-    let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
-    
-    assetsData.features.forEach(feature => {
-        const coords = feature.geometry.coordinates;
-        const lat = coords[1];
-        const lng = coords[0];
-        
-        minLat = Math.min(minLat, lat);
-        maxLat = Math.max(maxLat, lat);
-        minLng = Math.min(minLng, lng);
-        maxLng = Math.max(maxLng, lng);
-    });
-    
-    const bounds = [[minLat, minLng], [maxLat, maxLng]];
-    map.fitBounds(bounds, { padding: [50, 50] });
 }
 
-// Initialisation
-document.addEventListener('DOMContentLoaded', function() {
+// Window resize handling
+window.addEventListener('resize', function() {
     setTimeout(() => {
-        try {
-            initMap();
-        } catch (error) {
-            console.error('Erreur fatale:', error);
-        }
+        map.invalidateSize();
     }, 100);
+});
+
+// Advanced functions for nearby equipment
+function findNearbyEquipments(lat, lng, radius = 100) {
+    return fetch(`/api/ftth/equipment/nearby/?lat=${lat}&lng=${lng}&radius=${radius}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                return data.equipments;
+            }
+            return [];
+        })
+        .catch(error => {
+            console.error('Erreur recherche équipements proches:', error);
+            showNotification(`Erreur lors de la recherche d'équipements proches: ${error.message}`, 'error');
+            return [];
+        });
+}
+
+// Real-time form validation
+document.getElementById('equipment-name').addEventListener('input', function() {
+    const value = this.value.trim();
+    if (value.length < 3 && value.length > 0) {
+        this.classList.add('border-red-500');
+        this.classList.remove('border-green-500');
+    } else if (value.length >= 3) {
+        this.classList.remove('border-red-500');
+        this.classList.add('border-green-500');
+    } else {
+        this.classList.remove('border-red-500', 'border-green-500');
+    }
+});
+
+document.getElementById('equipment-fibers-total').addEventListener('input', function() {
+    const fibersUsedInput = document.getElementById('equipment-fibers-used');
+    const fibersUsed = parseInt(fibersUsedInput.value) || 0;
+    const fibersTotal = parseInt(this.value) || 0;
+
+    if (fibersUsed > fibersTotal && fibersTotal > 0) {
+        fibersUsedInput.value = fibersTotal;
+        showNotification('Fibres utilisées ajustées automatiquement (ne peut dépasser le total).', 'warning');
+    }
+    updateFiberOccupationDisplay();
+});
+
+document.getElementById('equipment-fibers-used').addEventListener('input', function() {
+    const fibersUsed = parseInt(this.value) || 0;
+    const fibersTotal = parseInt(document.getElementById('equipment-fibers-total').value) || 0;
+
+    if (fibersUsed < 0) {
+        this.value = 0;
+        showNotification('Fibres utilisées ne peut être négatif.', 'warning');
+    } else if (fibersUsed > fibersTotal && fibersTotal > 0) {
+        this.value = fibersTotal;
+        showNotification('Fibres utilisées ajustées automatiquement (ne peut dépasser le total).', 'warning');
+    }
+    updateFiberOccupationDisplay();
+});
+
+function updateFiberOccupationDisplay() {
+    const fibersUsed = parseInt(document.getElementById('equipment-fibers-used').value) || 0;
+    const fibersTotal = parseInt(document.getElementById('equipment-fibers-total').value) || 0;
+
+    if (fibersTotal > 0) {
+        const occupation = ((fibersUsed / fibersTotal) * 100).toFixed(1);
+        // You could update a visible element like a span next to the input
+        // For now, logging to console:
+        console.log(`Taux d'occupation: ${occupation}%`);
+    }
+}
+
+
+// Export data (bonus feature)
+function exportMapData() {
+    const data = {
+        equipments: equipments.map(e => ({
+            id: e.data.id,
+            name: e.data.name,
+            type: e.data.type,
+            coordinates: e.data.coordinates,
+            status: e.data.status,
+            reference: e.data.reference,
+            brand: e.data.brand,
+            model: e.data.model,
+            fibers_total: e.data.fibers_total,
+            fibers_used: e.data.fibers_used,
+            connector: e.data.connector,
+            location: e.data.location,
+            service_date: e.data.service_date,
+            warranty_end: e.data.warranty_end,
+            notes: e.data.notes
+        })),
+        cables: cables.map(c => ({
+            points: c.points,
+            distance: c.distance,
+            metadata: c.metadata
+        })),
+        exportDate: new Date().toISOString(),
+        stats: stats
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `carte_ftth_export_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showNotification('Données exportées avec succès', 'success');
+}
+
+// Add export button (optional)
+// You can uncomment this and decide where to place the button.
+/*
+const exportButton = document.createElement('button');
+exportButton.innerHTML = '<i class="fas fa-download mr-2"></i>Export';
+exportButton.className = 'bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-purple-700 transition-all duration-200 flex items-center';
+exportButton.onclick = exportMapData;
+// Append button to controls if necessary (e.g., in the top-right controls div)
+// document.querySelector('.absolute.top-4.right-4').appendChild(exportButton);
+*/
+
+console.log('🚀 Interface FTTH complètement initialisée');
+
+// Analytics and monitoring (optional)
+function trackUserAction(action, details = {}) {
+    console.log(`📊 Action utilisateur: ${action}`, details);
+    // Here you could send data to an analytics service
+}
+
+// Tracker specific actions
+const originalActivateToolMode = activateToolMode;
+activateToolMode = function(tool) {
+    trackUserAction('tool_activated', { tool });
+    return originalActivateToolMode(tool);
+};
+
+const originalCreateEquipment = createEquipment;
+createEquipment = function(e) {
+    trackUserAction('equipment_created', {
+        type: document.getElementById('equipment-type').value
+    });
+    return originalCreateEquipment(e);
+};
+
+// Periodic auto-save (draft) - currently just logs, can be extended for actual client-side draft saving
+setInterval(function() {
+    if (equipments.length > 0 || cables.length > 0) {
+        const draftData = {
+            equipmentsCount: equipments.length,
+            cablesCount: cables.length,
+            lastSave: new Date().toISOString()
+        };
+        // Example of saving to localStorage. This would NOT persist drawings or actual equipment data, just counts.
+        // For actual data persistence, you'd need to serialize equipment/cable objects.
+        localStorage.setItem('ftth_draft_summary', JSON.stringify(draftData));
+        console.log('💾 Draft automatique sauvegardé (summary only)');
+    }
+}, 300000); // Every 5 minutes
+
+// Restore draft on load if available (summary only)
+window.addEventListener('load', function() {
+    const draftSummary = localStorage.getItem('ftth_draft_summary');
+    if (draftSummary) {
+        try {
+            const draftData = JSON.parse(draftSummary);
+            if (draftData.equipmentsCount > 0 || draftData.cablesCount > 0) {
+                showNotification(`Draft précédent détecté. Dernier enregistrement: ${new Date(draftData.lastSave).toLocaleTimeString()}`, 'info');
+            }
+        } catch (error) {
+            console.error('Erreur lecture draft:', error);
+        }
+    }
 });
 
 </script>
