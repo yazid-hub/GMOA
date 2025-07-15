@@ -171,9 +171,13 @@ urlpatterns = [
     path('ajax/delete-media-complete/<int:media_id>/', views.delete_media_complete, name='delete_media_complete'),
 
    # Carte FTTH
+    # ==============================================================================
+    # INTERFACE CARTOGRAPHIQUE FTTH - CORRIGÉE
+    # ==============================================================================
     path('carte/', views.carte_ftth, name='carte_ftth'),
     path('api/assets/<int:asset_id>/details/', views.asset_details_ajax, name='asset_details_ajax'),
-    path('api/assets/search/', views.recherche_assets_ajax, name='recherche_assets_ajax'),
+    path('api/assets/search/', views.api_assets_search, name='api_assets_search'),
+   
 
 ]
 

@@ -3428,124 +3428,253 @@ def _format_file_size(size_bytes):
 
 
 # À ajouter dans core/views.py
+# À ajouter/modifier dans core/views.py
+
+import json
+from decimal import Decimal, InvalidOperation
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.db.models import Avg, Count
+from django.core.paginator import Paginator
+from django.db import models
+
+from .models import Asset, CategorieAsset, OrdreDeTravail
 
 @login_required
 def carte_ftth(request):
     """
-    Interface cartographique FTTH
+    Interface cartographique FTTH avec gestion robuste des erreurs
     """
-    # Récupérer tous les assets géolocalisés
-    assets = Asset.objects.filter(
-        latitude__isnull=False,
-        longitude__isnull=False
-    ).select_related('categorie').prefetch_related('attributs_perso')
-    
-    # Préparer les données pour la carte
-    assets_geojson = {
-        "type": "FeatureCollection",
-        "features": []
-    }
-    
-    for asset in assets:
-        # Récupérer les attributs personnalisés
-        attributs = {}
-        for attr in asset.attributs_perso.all():
-            attributs[attr.cle] = attr.valeur
+    try:
+        # Récupérer tous les assets avec coordonnées valides uniquement
+        assets = Asset.objects.filter(
+            latitude__isnull=False,
+            longitude__isnull=False
+        ).exclude(
+            # Exclure les coordonnées nulles ou invalides
+            models.Q(latitude=0) | models.Q(longitude=0) |
+            models.Q(latitude__lt=-90) | models.Q(latitude__gt=90) |
+            models.Q(longitude__lt=-180) | models.Q(longitude__gt=180)
+        ).select_related('categorie').prefetch_related('attributs_perso')
         
-        # Déterminer l'icône selon la catégorie
-        icon_type = "default"
-        if asset.categorie:
-            icon_type = asset.categorie.nom.lower().replace(' ', '_')
-        
-        feature = {
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [float(asset.longitude), float(asset.latitude)]
-            },
-            "properties": {
-                "id": asset.id,
-                "nom": asset.nom,
-                "reference": asset.reference or "",
-                "categorie": asset.categorie.nom if asset.categorie else "Non définie",
-                "statut": asset.get_statut_display(),
-                "criticite": asset.get_criticite_display(),
-                "localisation": asset.localisation_texte or "",
-                "adresse": asset.adresse_complete or "",
-                "icon_type": icon_type,
-                "attributs": attributs,
-                "photo": asset.photo_principale.url if asset.photo_principale else None,
-                "derniere_maintenance": asset.derniere_maintenance.isoformat() if asset.derniere_maintenance else None,
-                "prochaine_maintenance": asset.prochaine_maintenance.isoformat() if asset.prochaine_maintenance else None
-            }
+        # Préparer les données GeoJSON avec validation
+        assets_geojson = {
+            "type": "FeatureCollection",
+            "features": []
         }
-        assets_geojson["features"].append(feature)
-    
-    # Statistiques
-    stats = {
-        'total_assets': assets.count(),
-        'en_service': assets.filter(statut='EN_SERVICE').count(),
-        'en_panne': assets.filter(statut='EN_PANNE').count(),
-        'en_maintenance': assets.filter(statut='EN_MAINTENANCE').count(),
-        'categories': list(assets.values('categorie__nom').annotate(count=Count('id')).order_by('-count'))
-    }
-    
-    # Centre de la carte (moyenne des positions)
-    if assets.exists():
-        center_lat = assets.aggregate(Avg('latitude'))['latitude__avg']
-        center_lng = assets.aggregate(Avg('longitude'))['longitude__avg']
-    else:
-        center_lat, center_lng = 48.8566, 2.3522  # Paris par défaut
-    
-    context = {
-        'assets_geojson': json.dumps(assets_geojson),
-        'stats': stats,
-        'center_lat': center_lat,
-        'center_lng': center_lng,
-        'categories': CategorieAsset.objects.all()
-    }
-    
-    return render(request, 'core/carte/carte_ftth.html', context)
+        
+        assets_valides = 0
+        assets_ignores = 0
+        
+        for asset in assets:
+            try:
+                # Validation stricte des coordonnées
+                if not _validate_coordinates(asset.latitude, asset.longitude):
+                    assets_ignores += 1
+                    continue
+                
+                # Récupérer les attributs personnalisés
+                attributs = {}
+                for attr in asset.attributs_perso.all():
+                    attributs[attr.cle] = attr.valeur
+                
+                # Déterminer l'icône selon la catégorie
+                icon_type = "default"
+                if asset.categorie:
+                    icon_type = asset.categorie.nom.lower().replace(' ', '_')
+                
+                # Créer la feature GeoJSON
+                feature = {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [float(asset.longitude), float(asset.latitude)]
+                    },
+                    "properties": {
+                        "id": asset.id,
+                        "nom": asset.nom or "Asset sans nom",
+                        "reference": asset.reference or "",
+                        "categorie": asset.categorie.nom if asset.categorie else "Non définie",
+                        "statut": asset.get_statut_display(),
+                        "criticite": asset.get_criticite_display(),
+                        "localisation": asset.localisation_texte or "",
+                        "adresse": asset.adresse_complete or "",
+                        "icon_type": icon_type,
+                        "attributs": attributs,
+                        "photo": asset.photo_principale.url if asset.photo_principale else None,
+                        "derniere_maintenance": asset.derniere_maintenance.isoformat() if asset.derniere_maintenance else None,
+                        "prochaine_maintenance": asset.prochaine_maintenance.isoformat() if asset.prochaine_maintenance else None
+                    }
+                }
+                
+                assets_geojson["features"].append(feature)
+                assets_valides += 1
+                
+            except Exception as e:
+                print(f"Erreur traitement asset {asset.id}: {e}")
+                assets_ignores += 1
+                continue
+        
+        # Statistiques pour l'affichage
+        stats = {
+            'total_assets': assets_valides,
+            'en_service': assets.filter(statut='EN_SERVICE').count(),
+            'en_panne': assets.filter(statut='EN_PANNE').count(),
+            'en_maintenance': assets.filter(statut='EN_MAINTENANCE').count(),
+            'categories': list(
+                assets.values('categorie__nom')
+                .annotate(count=Count('id'))
+                .order_by('-count')[:5]  # Limiter aux 5 principales
+            )
+        }
+        
+        # Calcul du centre de la carte avec validation
+        center_lat, center_lng = _calculate_map_center(assets)
+        
+        # Préparer le contexte avec valeurs par défaut sûres
+        context = {
+            'assets_geojson': json.dumps(assets_geojson),
+            'stats': stats,
+            'center_lat': center_lat,
+            'center_lng': center_lng,
+            'categories': CategorieAsset.objects.all(),
+            'assets_valides': assets_valides,
+            'assets_ignores': assets_ignores,
+        }
+        
+        # Log pour debugging
+        print(f"Carte FTTH: {assets_valides} assets valides, {assets_ignores} ignorés")
+        
+        return render(request, 'core/carte/carte_ftth.html', context)
+        
+    except Exception as e:
+        print(f"Erreur dans carte_ftth: {e}")
+        
+        # Contexte d'urgence en cas d'erreur
+        context = {
+            'assets_geojson': json.dumps({"type": "FeatureCollection", "features": []}),
+            'stats': {
+                'total_assets': 0,
+                'en_service': 0,
+                'en_panne': 0,
+                'en_maintenance': 0,
+                'categories': []
+            },
+            'center_lat': 48.8566,  # Paris par défaut
+            'center_lng': 2.3522,
+            'categories': CategorieAsset.objects.all(),
+            'error_message': "Erreur lors du chargement des données cartographiques"
+        }
+        
+        return render(request, 'core/carte/carte_ftth.html', context)
+
+
+def _validate_coordinates(latitude, longitude):
+    """
+    Valide que les coordonnées sont utilisables
+    """
+    try:
+        if latitude is None or longitude is None:
+            return False
+            
+        # Convertir en float si c'est un Decimal
+        if isinstance(latitude, Decimal):
+            latitude = float(latitude)
+        if isinstance(longitude, Decimal):
+            longitude = float(longitude)
+            
+        # Vérifier les types
+        if not isinstance(latitude, (int, float)) or not isinstance(longitude, (int, float)):
+            return False
+            
+        # Vérifier les valeurs NaN
+        if latitude != latitude or longitude != longitude:  # Test NaN
+            return False
+            
+        # Vérifier les plages valides
+        if latitude < -90 or latitude > 90:
+            return False
+        if longitude < -180 or longitude > 180:
+            return False
+            
+        # Exclure les coordonnées nulles (souvent des valeurs par défaut erronées)
+        if latitude == 0 and longitude == 0:
+            return False
+            
+        return True
+        
+    except (TypeError, ValueError, InvalidOperation):
+        return False
+
+
+def _calculate_map_center(assets):
+    """
+    Calcule le centre de la carte de manière sécurisée
+    """
+    try:
+        # Tenter de calculer la moyenne des coordonnées
+        aggregates = assets.aggregate(
+            avg_lat=Avg('latitude'),
+            avg_lng=Avg('longitude')
+        )
+        
+        center_lat = aggregates.get('avg_lat')
+        center_lng = aggregates.get('avg_lng')
+        
+        # Valider les résultats
+        if _validate_coordinates(center_lat, center_lng):
+            return float(center_lat), float(center_lng)
+        else:
+            raise ValueError("Coordonnées moyennes invalides")
+            
+    except Exception as e:
+        print(f"Erreur calcul centre carte: {e}")
+        # Fallback vers Paris
+        return 48.8566, 2.3522
 
 
 @login_required
 def asset_details_ajax(request, asset_id):
     """
-    Détails d'un asset via AJAX pour la popup carte
+    Détails d'un asset via AJAX pour la popup carte avec gestion d'erreur
     """
     try:
         asset = get_object_or_404(Asset, pk=asset_id)
         
-        # Dernières interventions
+        # Dernières interventions (limiter pour éviter trop de données)
         derniers_ots = OrdreDeTravail.objects.filter(
             asset=asset
-        ).order_by('-date_creation')[:5]
+        ).select_related('intervention', 'statut', 'cree_par').order_by('-date_creation')[:5]
         
-        # Assets enfants
+        # Assets enfants (limiter aussi)
         enfants = asset.enfants.all()[:10]
         
-        # Assets dans un rayon de 100m
-        if asset.latitude and asset.longitude:
-            # Calcul approximatif (1 degré ≈ 111 km)
-            delta = 0.001  # environ 100m
-            assets_proches = Asset.objects.filter(
-                latitude__range=(asset.latitude - delta, asset.latitude + delta),
-                longitude__range=(asset.longitude - delta, asset.longitude + delta)
-            ).exclude(id=asset.id)[:5]
-        else:
-            assets_proches = []
+        # Assets dans un rayon de 100m (seulement si coordinates valides)
+        assets_proches = []
+        if _validate_coordinates(asset.latitude, asset.longitude):
+            try:
+                # Calcul approximatif (1 degré ≈ 111 km)
+                delta = 0.001  # environ 100m
+                assets_proches = Asset.objects.filter(
+                    latitude__range=(float(asset.latitude) - delta, float(asset.latitude) + delta),
+                    longitude__range=(float(asset.longitude) - delta, float(asset.longitude) + delta)
+                ).exclude(id=asset.id).select_related('categorie')[:5]
+            except Exception as e:
+                print(f"Erreur recherche assets proches: {e}")
         
+        # Préparer la réponse avec validation des données
         data = {
             'success': True,
             'asset': {
                 'id': asset.id,
-                'nom': asset.nom,
-                'reference': asset.reference,
-                'categorie': asset.categorie.nom if asset.categorie else None,
+                'nom': asset.nom or "Asset sans nom",
+                'reference': asset.reference or "",
+                'categorie': asset.categorie.nom if asset.categorie else "Non définie",
                 'statut': asset.get_statut_display(),
                 'criticite': asset.get_criticite_display(),
-                'localisation': asset.localisation_texte,
-                'adresse': asset.adresse_complete,
+                'localisation': asset.localisation_texte or "",
+                'adresse': asset.adresse_complete or "",
                 'photo': asset.photo_principale.url if asset.photo_principale else None,
                 'derniere_maintenance': asset.derniere_maintenance.strftime('%d/%m/%Y %H:%M') if asset.derniere_maintenance else None,
                 'prochaine_maintenance': asset.prochaine_maintenance.strftime('%d/%m/%Y %H:%M') if asset.prochaine_maintenance else None,
@@ -3553,68 +3682,88 @@ def asset_details_ajax(request, asset_id):
                 'derniers_ots': [
                     {
                         'id': ot.id,
-                        'titre': ot.titre,
-                        'statut': ot.statut.nom if ot.statut else 'Non défini',
-                        'date': ot.date_creation.strftime('%d/%m/%Y')
-                    } for ot in derniers_ots
+                        'titre': ot.titre or "OT sans titre",
+                        'statut': ot.statut.nom if ot.statut else "Statut inconnu",
+                        'date_creation': ot.date_creation.strftime('%d/%m/%Y') if ot.date_creation else "",
+                        'technicien': ot.assigne_a_technicien.get_full_name() if ot.assigne_a_technicien else "Non assigné"
+                    }
+                    for ot in derniers_ots
                 ],
                 'enfants': [
                     {
                         'id': enfant.id,
-                        'nom': enfant.nom,
-                        'categorie': enfant.categorie.nom if enfant.categorie else None
-                    } for enfant in enfants
+                        'nom': enfant.nom or "Asset sans nom",
+                        'reference': enfant.reference or ""
+                    }
+                    for enfant in enfants
                 ],
                 'assets_proches': [
                     {
                         'id': proche.id,
-                        'nom': proche.nom,
-                        'distance': '~100m'  # Calcul approximatif
-                    } for proche in assets_proches
+                        'nom': proche.nom or "Asset sans nom",
+                        'distance': "~100m"  # Distance approximative
+                    }
+                    for proche in assets_proches
                 ]
             }
         }
         
         return JsonResponse(data)
         
-    except Exception as e:
+    except Asset.DoesNotExist:
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Asset non trouvé'
+        }, status=404)
+        
+    except Exception as e:
+        print(f"Erreur asset_details_ajax: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Erreur lors du chargement des détails'
         }, status=500)
 
 
-@login_required 
-def recherche_assets_ajax(request):
+@login_required
+def api_assets_search(request):
     """
-    Recherche d'assets pour la carte
+    API de recherche d'assets avec validation
     """
-    query = request.GET.get('q', '').strip()
-    
-    if len(query) < 2:
-        return JsonResponse({'results': []})
-    
-    # Recherche dans plusieurs champs
-    assets = Asset.objects.filter(
-        Q(nom__icontains=query) |
-        Q(reference__icontains=query) |
-        Q(localisation_texte__icontains=query) |
-        Q(adresse_complete__icontains=query)
-    ).filter(
-        latitude__isnull=False,
-        longitude__isnull=False
-    )[:10]
-    
-    results = []
-    for asset in assets:
-        results.append({
-            'id': asset.id,
-            'nom': asset.nom,
-            'reference': asset.reference,
-            'categorie': asset.categorie.nom if asset.categorie else 'Non définie',
-            'adresse': asset.adresse_complete or asset.localisation_texte,
-            'latitude': float(asset.latitude),
-            'longitude': float(asset.longitude)
-        })
-    
-    return JsonResponse({'results': results})
+    try:
+        query = request.GET.get('q', '').strip()
+        
+        if len(query) < 2:
+            return JsonResponse({'results': []})
+        
+        # Recherche dans plusieurs champs
+        assets = Asset.objects.filter(
+            models.Q(nom__icontains=query) |
+            models.Q(reference__icontains=query) |
+            models.Q(localisation_texte__icontains=query) |
+            models.Q(adresse_complete__icontains=query)
+        ).select_related('categorie')[:20]  # Limiter les résultats
+        
+        results = []
+        for asset in assets:
+            # Vérifier si l'asset est géolocalisé
+            has_coords = _validate_coordinates(asset.latitude, asset.longitude)
+            
+            results.append({
+                'id': asset.id,
+                'nom': asset.nom or "Asset sans nom",
+                'reference': asset.reference or "",
+                'categorie': asset.categorie.nom if asset.categorie else "Non catégorisé",
+                'adresse': asset.adresse_complete or asset.localisation_texte or "",
+                'latitude': float(asset.latitude) if has_coords else None,
+                'longitude': float(asset.longitude) if has_coords else None,
+                'has_coordinates': has_coords
+            })
+        
+        return JsonResponse({'results': results})
+        
+    except Exception as e:
+        print(f"Erreur api_assets_search: {e}")
+        return JsonResponse({
+            'results': [],
+            'error': 'Erreur lors de la recherche'
+        }, status=500)

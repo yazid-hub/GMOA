@@ -4,203 +4,102 @@
 {% block title %}Carte FTTH - Assets{% endblock %}
 
 {% block extra_css %}
-<!-- Leaflet CSS -->
+<!-- Leaflet CSS uniquement -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-
+<!-- Fix dimensions carte avec Tailwind -->
 <style>
 #map {
-    height: calc(100vh - 64px);
-    width: 100%;
-}
-
-.sidebar {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 350px;
-    height: 100%;
-    background: white;
-    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-    z-index: 1000;
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-}
-
-.sidebar.open {
-    transform: translateX(0);
-}
-
-.leaflet-popup-content {
-    max-width: 300px;
-}
-
-.asset-marker {
-    border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.asset-en-service { background-color: #10b981; }
-.asset-en-panne { background-color: #ef4444; }
-.asset-en-maintenance { background-color: #f59e0b; }
-.asset-hors-service { background-color: #6b7280; }
-
-.search-results {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-    max-height: 300px;
-    overflow-y: auto;
-    z-index: 1001;
-}
-
-.search-result-item {
-    padding: 12px;
-    border-bottom: 1px solid #f3f4f6;
-    cursor: pointer;
-}
-
-.search-result-item:hover {
-    background-color: #f9fafb;
-}
-
-.stats-panel {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    z-index: 1000;
-    min-width: 200px;
-}
-
-.legend {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    z-index: 1000;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.legend-color {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    margin-right: 8px;
-    border: 2px solid white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    height: 100vh !important;
+    width: 100% !important;
+    min-height: 600px !important;
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="relative">
-    <!-- Barre d'outils -->
-    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1001] flex space-x-2">
-        <!-- Recherche -->
+<div class="w-full h-screen overflow-hidden">
+    <!-- Barre de recherche -->
+    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-50">
         <div class="relative">
             <input type="text" 
                    id="search-input"
                    placeholder="Rechercher un asset..."
-                   class="w-80 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <div id="search-results" class="search-results hidden"></div>
+                   class="w-96 px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div id="search-results" class="absolute top-full left-0 right-0 bg-white border border-gray-300 border-t-0 rounded-b-lg max-h-60 overflow-y-auto z-50 hidden"></div>
         </div>
-        
-        <!-- Boutons d'outils -->
-        <button onclick="toggleSidebar()" 
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
-            <i class="fas fa-info-circle mr-2"></i>Infos
-        </button>
-        
-        <button onclick="toggleFullscreen()" 
-                class="px-4 py-2 bg-gray-600 text-white rounded-lg shadow-lg hover:bg-gray-700">
-            <i class="fas fa-expand mr-2"></i>Plein écran
-        </button>
     </div>
 
-    <!-- Panneau statistiques -->
-    <div class="stats-panel">
-        <h3 class="font-bold text-gray-800 mb-2">
+    <!-- Statistiques -->
+    <div class="absolute top-4 left-4 bg-white p-4 rounded-lg shadow-lg z-40 min-w-48">
+        <h3 class="font-bold text-gray-800 mb-2 flex items-center">
             <i class="fas fa-chart-bar mr-2 text-blue-600"></i>
-            Statistiques
+            Stats
         </h3>
         <div class="space-y-1 text-sm">
             <div class="flex justify-between">
-                <span>Total assets:</span>
-                <span class="font-semibold">{{ stats.total_assets }}</span>
+                <span>Total:</span>
+                <span class="font-semibold">{{ stats.total_assets|default:0 }}</span>
             </div>
             <div class="flex justify-between">
-                <span>En service:</span>
-                <span class="font-semibold text-green-600">{{ stats.en_service }}</span>
+                <span class="text-green-600">Service:</span>
+                <span class="font-semibold">{{ stats.en_service|default:0 }}</span>
             </div>
             <div class="flex justify-between">
-                <span>En panne:</span>
-                <span class="font-semibold text-red-600">{{ stats.en_panne }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Maintenance:</span>
-                <span class="font-semibold text-yellow-600">{{ stats.en_maintenance }}</span>
+                <span class="text-red-600">Panne:</span>
+                <span class="font-semibold">{{ stats.en_panne|default:0 }}</span>
             </div>
         </div>
+    </div>
+
+    <!-- Boutons -->
+    <div class="absolute top-4 right-4 space-x-2 z-40">
+        <button onclick="toggleSidebar()" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-blue-700">
+            <i class="fas fa-info-circle"></i>
+        </button>
+        <button onclick="centrerSurAssets()" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-green-700">
+            🎯 Centrer
+        </button>
+        <button onclick="debugCarte()" class="bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-red-700">
+            🔧 Debug
+        </button>
+        <button onclick="refreshPage()" class="bg-gray-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-gray-700">
+            <i class="fas fa-sync-alt"></i>
+        </button>
     </div>
 
     <!-- Légende -->
-    <div class="legend">
-        <h4 class="font-bold text-gray-800 mb-3">
-            <i class="fas fa-map-marker-alt mr-2 text-blue-600"></i>
-            Statuts
-        </h4>
-        <div class="space-y-2">
-            <div class="legend-item">
-                <div class="legend-color asset-en-service"></div>
-                <span class="text-sm">En service</span>
+    <div class="absolute bottom-4 left-4 bg-white p-4 rounded-lg shadow-lg z-40">
+        <h4 class="font-bold text-gray-800 mb-2">Statuts</h4>
+        <div class="space-y-2 text-sm">
+            <div class="flex items-center">
+                <div class="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
+                <span>En service</span>
             </div>
-            <div class="legend-item">
-                <div class="legend-color asset-en-panne"></div>
-                <span class="text-sm">En panne</span>
+            <div class="flex items-center">
+                <div class="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
+                <span>En panne</span>
             </div>
-            <div class="legend-item">
-                <div class="legend-color asset-en-maintenance"></div>
-                <span class="text-sm">Maintenance</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color asset-hors-service"></div>
-                <span class="text-sm">Hors service</span>
+            <div class="flex items-center">
+                <div class="w-4 h-4 bg-yellow-500 rounded-full mr-2"></div>
+                <span>Maintenance</span>
             </div>
         </div>
     </div>
 
-    <!-- Carte -->
-    <div id="map"></div>
+    <!-- Carte - DIMENSIONS FORCÉES -->
+    <div id="map" style="height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; z-index: 10;"></div>
 
-    <!-- Sidebar détails -->
-    <div id="sidebar" class="sidebar">
+    <!-- Sidebar -->
+    <div id="sidebar" class="fixed top-0 right-0 w-80 h-full bg-white shadow-xl transform translate-x-full transition-transform duration-300 z-50">
         <div class="p-6 h-full overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-gray-800">Détails Asset</h2>
+                <h2 class="text-xl font-bold">Détails Asset</h2>
                 <button onclick="closeSidebar()" class="text-gray-500 hover:text-gray-700">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
             <div id="sidebar-content">
-                <p class="text-gray-500">Sélectionnez un asset sur la carte pour voir ses détails.</p>
+                <p class="text-gray-500">Sélectionnez un asset sur la carte.</p>
             </div>
         </div>
     </div>
@@ -208,305 +107,485 @@
 
 <!-- Scripts -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
 <script>
-let map;
-let assetsLayer;
-let currentAsset = null;
+// ==========================================
+// VARIABLES GLOBALES
+// ==========================================
+let map = null;
+let assetsLayer = null;
 
-// Données des assets depuis Django
-const assetsData = {{ assets_geojson|safe }};
+// Coordonnées par défaut (Paris)
+const DEFAULT_LAT = 48.8566;
+const DEFAULT_LNG = 2.3522;
 
-// Initialisation de la carte
-function initMap() {
-    // Créer la carte
-    map = L.map('map').setView([{{ center_lat }}, {{ center_lng }}], 10);
+// ==========================================
+// PRÉPARATION DES DONNÉES
+// ==========================================
+let assetsData = null;
+let centerLat = DEFAULT_LAT;
+let centerLng = DEFAULT_LNG;
 
-    // Ajouter la couche de tuiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+// Récupération sécurisée des données Django avec DIAGNOSTIC COMPLET
+try {
+    console.log('🔍 Variables Django reçues:');
+    console.log('- assets_geojson:', '{{ assets_geojson|escapejs }}');
+    console.log('- center_lat:', '{{ center_lat|default:"UNDEFINED" }}');
+    console.log('- center_lng:', '{{ center_lng|default:"UNDEFINED" }}');
+    console.log('- stats:', '{{ stats|default:"UNDEFINED" }}');
 
-    // Ajouter les contrôles de dessin
-    const drawControl = new L.Control.Draw({
-        position: 'topleft',
-        draw: {
-            polyline: {
-                shapeOptions: {
-                    color: '#f357a1',
-                    weight: 4
-                }
-            },
-            polygon: {
-                allowIntersection: false,
-                shapeOptions: {
-                    color: '#bada55'
-                }
-            },
-            circle: false,
-            rectangle: {
-                shapeOptions: {
-                    clickable: false
-                }
-            },
-            marker: true
-        },
-        edit: {
-            featureGroup: false
-        }
-    });
-    map.addControl(drawControl);
-
-    // Ajouter les assets
-    addAssetsToMap();
-
-    // Événements de dessin
-    map.on(L.Draw.Event.CREATED, function (e) {
-        const layer = e.layer;
-        console.log('Nouvelle géométrie créée:', layer.toGeoJSON());
-        // Ici on pourra sauvegarder en base
-    });
+    const rawData = {{ assets_geojson|safe }};
+    console.log('📊 Données brutes reçues:', rawData);
+    
+    if (rawData && rawData.features) {
+        assetsData = rawData;
+        console.log('✅ Assets chargés:', assetsData.features.length);
+        console.log('📋 Premier asset:', assetsData.features[0]);
+    } else {
+        console.log('❌ Pas de données assets ou format incorrect');
+        assetsData = { type: "FeatureCollection", features: [] };
+    }
+} catch (e) {
+    console.error('❌ Erreur données assets:', e);
+    assetsData = { type: "FeatureCollection", features: [] };
 }
 
-// Ajouter les assets sur la carte
-function addAssetsToMap() {
-    assetsLayer = L.geoJSON(assetsData, {
-        pointToLayer: function(feature, latlng) {
-            const props = feature.properties;
-            const statut = props.statut.toLowerCase().replace(/\s+/g, '_');
-            
-            return L.circleMarker(latlng, {
-                radius: 8,
-                fillColor: getStatusColor(statut),
-                color: '#fff',
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.8,
-                className: `asset-marker asset-${statut}`
-            });
-        },
-        onEachFeature: function(feature, layer) {
-            const props = feature.properties;
-            
-            // Popup basique
-            const popupContent = `
-                <div class="asset-popup">
-                    <h3 class="font-bold text-lg mb-2">${props.nom}</h3>
-                    ${props.reference ? `<p><strong>Ref:</strong> ${props.reference}</p>` : ''}
-                    <p><strong>Catégorie:</strong> ${props.categorie}</p>
-                    <p><strong>Statut:</strong> <span class="px-2 py-1 rounded text-sm bg-gray-100">${props.statut}</span></p>
-                    ${props.adresse ? `<p><strong>Adresse:</strong> ${props.adresse}</p>` : ''}
-                    <div class="mt-3 flex space-x-2">
-                        <button onclick="showAssetDetails(${props.id})" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                            Détails
-                        </button>
-                        <button onclick="centerOnAsset(${feature.geometry.coordinates[1]}, ${feature.geometry.coordinates[0]})" class="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700">
-                            Centrer
+// Centre de la carte avec diagnostic
+try {
+    const backendLat = parseFloat("{{ center_lat|default:'' }}");
+    const backendLng = parseFloat("{{ center_lng|default:'' }}");
+    
+    console.log('🎯 Centre reçu du backend:', backendLat, backendLng);
+    
+    if (!isNaN(backendLat) && !isNaN(backendLng)) {
+        centerLat = backendLat;
+        centerLng = backendLng;
+        console.log('✅ Centre depuis backend:', centerLat, centerLng);
+    } else {
+        console.log('⚠️ Centre backend invalide, utilisation centre par défaut (Paris)');
+    }
+} catch (e) {
+    console.log('⚠️ Erreur centre, utilisation par défaut:', e);
+}
+
+// ==========================================
+// INITIALISATION CARTE
+// ==========================================
+function initMap() {
+    try {
+        console.log('🗺️ Initialisation carte...');
+        console.log('📍 Centre utilisé:', centerLat, centerLng);
+        
+        // Créer la carte
+        map = L.map('map').setView([centerLat, centerLng], 10);
+        console.log('✅ Objet carte créé');
+
+        // Ajouter les tuiles avec événements de diagnostic
+        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        });
+        
+        tileLayer.on('loading', function() {
+            console.log('📡 Chargement des tuiles...');
+        });
+        
+        tileLayer.on('load', function() {
+            console.log('✅ Tuiles chargées avec succès');
+        });
+        
+        tileLayer.on('tileerror', function(e) {
+            console.error('❌ Erreur chargement tuile:', e);
+        });
+        
+        tileLayer.addTo(map);
+        console.log('✅ Couche de tuiles ajoutée');
+
+        // FORCER LE REDIMENSIONNEMENT DE LA CARTE
+        setTimeout(() => {
+            console.log('🔄 Redimensionnement forcé de la carte...');
+            map.invalidateSize();
+            console.log('✅ Carte redimensionnée');
+        }, 100);
+
+        // Test de la carte
+        console.log('🧪 Test carte - Zoom actuel:', map.getZoom());
+        console.log('🧪 Test carte - Centre actuel:', map.getCenter());
+
+        // Ajouter les assets
+        addAssets();
+        
+        console.log('✅ Carte complètement initialisée');
+        
+    } catch (error) {
+        console.error('❌ Erreur init carte:', error);
+        
+        // Afficher l'erreur dans l'interface
+        const mapDiv = document.getElementById('map');
+        if (mapDiv) {
+            mapDiv.innerHTML = `
+                <div class="flex items-center justify-center h-full bg-red-50">
+                    <div class="text-center p-8">
+                        <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                        <h3 class="text-lg font-bold text-red-700 mb-2">Erreur de carte</h3>
+                        <p class="text-red-600 mb-4">${error.message}</p>
+                        <button onclick="location.reload()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                            Recharger
                         </button>
                     </div>
                 </div>
             `;
-            
-            layer.bindPopup(popupContent, { maxWidth: 300 });
-            
-            // Événement clic
-            layer.on('click', function() {
-                currentAsset = props.id;
-                showAssetDetails(props.id);
-            });
         }
-    }).addTo(map);
+    }
 }
 
-// Couleurs selon le statut
-function getStatusColor(statut) {
-    const colors = {
-        'en_service': '#10b981',
-        'en_panne': '#ef4444', 
-        'en_maintenance': '#f59e0b',
-        'hors_service': '#6b7280'
-    };
-    return colors[statut] || '#6b7280';
-}
+// ==========================================
+// AJOUT DES ASSETS
+// ==========================================
+function addAssets() {
+    try {
+        if (!assetsData || !assetsData.features || assetsData.features.length === 0) {
+            console.log('⚠️ Aucun asset à afficher');
+            return;
+        }
 
-// Afficher les détails d'un asset
-function showAssetDetails(assetId) {
-    fetch(`/api/assets/${assetId}/details/`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const asset = data.asset;
-                const content = `
-                    <div class="asset-details">
-                        <div class="mb-4">
-                            ${asset.photo ? `<img src="${asset.photo}" alt="${asset.nom}" class="w-full h-32 object-cover rounded-lg mb-3">` : ''}
-                            <h3 class="text-xl font-bold">${asset.nom}</h3>
-                            ${asset.reference ? `<p class="text-gray-600">${asset.reference}</p>` : ''}
-                        </div>
-                        
-                        <div class="space-y-3">
-                            <div>
-                                <h4 class="font-semibold text-gray-800">Informations générales</h4>
-                                <div class="text-sm space-y-1 mt-1">
-                                    <p><strong>Catégorie:</strong> ${asset.categorie || 'Non définie'}</p>
-                                    <p><strong>Statut:</strong> <span class="px-2 py-1 rounded bg-gray-100">${asset.statut}</span></p>
-                                    <p><strong>Criticité:</strong> ${asset.criticite}</p>
-                                    ${asset.adresse ? `<p><strong>Adresse:</strong> ${asset.adresse}</p>` : ''}
-                                </div>
-                            </div>
-                            
-                            ${asset.derniere_maintenance || asset.prochaine_maintenance ? `
-                            <div>
-                                <h4 class="font-semibold text-gray-800">Maintenance</h4>
-                                <div class="text-sm space-y-1 mt-1">
-                                    ${asset.derniere_maintenance ? `<p><strong>Dernière:</strong> ${asset.derniere_maintenance}</p>` : ''}
-                                    ${asset.prochaine_maintenance ? `<p><strong>Prochaine:</strong> ${asset.prochaine_maintenance}</p>` : ''}
-                                </div>
-                            </div>
-                            ` : ''}
-                            
-                            ${asset.attributs.length > 0 ? `
-                            <div>
-                                <h4 class="font-semibold text-gray-800">Attributs techniques</h4>
-                                <div class="text-sm space-y-1 mt-1">
-                                    ${asset.attributs.map(attr => `<p><strong>${attr.cle}:</strong> ${attr.valeur}</p>`).join('')}
-                                </div>
-                            </div>
-                            ` : ''}
-                            
-                            ${asset.derniers_ots.length > 0 ? `
-                            <div>
-                                <h4 class="font-semibold text-gray-800">Dernières interventions</h4>
-                                <div class="text-sm space-y-1 mt-1">
-                                    ${asset.derniers_ots.map(ot => `
-                                        <div class="flex justify-between">
-                                            <span>${ot.titre}</span>
-                                            <span class="text-gray-500">${ot.date}</span>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                            ` : ''}
-                        </div>
-                        
-                        <div class="mt-6 space-y-2">
-                            <button onclick="editAsset(${asset.id})" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
-                                <i class="fas fa-edit mr-2"></i>Modifier
-                            </button>
-                            <button onclick="createIntervention(${asset.id})" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">
-                                <i class="fas fa-plus mr-2"></i>Nouvelle intervention
-                            </button>
-                        </div>
+        // Filtrer les assets avec coordonnées valides
+        const validFeatures = assetsData.features.filter(feature => {
+            if (!feature.geometry || !feature.geometry.coordinates) return false;
+            const coords = feature.geometry.coordinates;
+            return Array.isArray(coords) && coords.length === 2 && 
+                   !isNaN(coords[0]) && !isNaN(coords[1]);
+        });
+
+        console.log('📍 Assets valides:', validFeatures.length);
+
+        if (validFeatures.length === 0) {
+            console.log('⚠️ Aucun asset avec coordonnées valides');
+            return;
+        }
+
+        // Créer la couche GeoJSON
+        assetsLayer = L.geoJSON({ 
+            type: "FeatureCollection", 
+            features: validFeatures 
+        }, {
+            pointToLayer: function(feature, latlng) {
+                const props = feature.properties || {};
+                const color = getStatusColor(props.statut);
+                
+                return L.circleMarker(latlng, {
+                    radius: 8,
+                    fillColor: color,
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+            },
+            onEachFeature: function(feature, layer) {
+                const props = feature.properties || {};
+                
+                // Popup simple
+                const popup = `
+                    <div class="p-2">
+                        <h3 class="font-bold">${props.nom || 'Asset'}</h3>
+                        <p class="text-sm">Statut: ${props.statut || 'Inconnu'}</p>
+                        <button onclick="showDetails(${props.id || 0})" class="mt-2 bg-blue-500 text-white px-2 py-1 rounded text-xs">
+                            Détails
+                        </button>
                     </div>
                 `;
                 
-                document.getElementById('sidebar-content').innerHTML = content;
-                openSidebar();
+                layer.bindPopup(popup);
+                
+                // Clic pour détails
+                layer.on('click', function() {
+                    if (props.id) {
+                        showDetails(props.id);
+                    }
+                });
             }
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-        });
+        }).addTo(map);
+
+        console.log('✅ Assets ajoutés à la carte');
+        
+    } catch (error) {
+        console.error('❌ Erreur ajout assets:', error);
+    }
 }
 
-// Recherche d'assets
-let searchTimeout;
-document.getElementById('search-input').addEventListener('input', function() {
-    const query = this.value.trim();
-    
-    clearTimeout(searchTimeout);
-    
-    if (query.length < 2) {
-        hideSearchResults();
-        return;
+// ==========================================
+// FONCTIONS UTILITAIRES
+// ==========================================
+function getStatusColor(statut) {
+    switch ((statut || '').toLowerCase()) {
+        case 'en service': return '#10b981';
+        case 'en panne': return '#ef4444';
+        case 'en maintenance': return '#f59e0b';
+        default: return '#6b7280';
     }
+}
+
+// ==========================================
+// SIDEBAR
+// ==========================================
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        sidebar.classList.toggle('translate-x-full');
+    }
+}
+
+function openSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        sidebar.classList.remove('translate-x-full');
+    }
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        sidebar.classList.add('translate-x-full');
+    }
+}
+
+// ==========================================
+// DÉTAILS ASSET
+// ==========================================
+function showDetails(assetId) {
+    if (!assetId) return;
     
-    searchTimeout = setTimeout(() => {
-        fetch(`/api/assets/search/?q=${encodeURIComponent(query)}`)
-            .then(response => response.json())
-            .then(data => {
-                showSearchResults(data.results);
-            });
-    }, 300);
+    const content = document.getElementById('sidebar-content');
+    if (!content) return;
+    
+    // Loading
+    content.innerHTML = `
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+            <p>Chargement...</p>
+        </div>
+    `;
+    
+    openSidebar();
+    
+    // Requête AJAX (optionnelle - peut être remplacée par données locales)
+    setTimeout(() => {
+        try {
+            // Chercher l'asset dans les données locales
+            const asset = findAssetById(assetId);
+            if (asset) {
+                content.innerHTML = createAssetHTML(asset);
+            } else {
+                content.innerHTML = '<p class="text-red-500">Asset non trouvé</p>';
+            }
+        } catch (error) {
+            console.error('Erreur détails:', error);
+            content.innerHTML = '<p class="text-red-500">Erreur de chargement</p>';
+        }
+    }, 500);
+}
+
+function findAssetById(id) {
+    if (!assetsData || !assetsData.features) return null;
+    
+    const feature = assetsData.features.find(f => 
+        f.properties && f.properties.id == id
+    );
+    
+    return feature ? feature.properties : null;
+}
+
+function createAssetHTML(asset) {
+    return `
+        <div>
+            <h3 class="text-lg font-bold mb-2">${asset.nom || 'Asset'}</h3>
+            <div class="space-y-2 text-sm">
+                <p><strong>Référence:</strong> ${asset.reference || 'N/A'}</p>
+                <p><strong>Catégorie:</strong> ${asset.categorie || 'N/A'}</p>
+                <p><strong>Statut:</strong> ${asset.statut || 'N/A'}</p>
+                <p><strong>Localisation:</strong> ${asset.localisation || 'N/A'}</p>
+            </div>
+            <div class="mt-4 space-y-2">
+                <button onclick="editAsset(${asset.id})" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+                    Modifier
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
+// RECHERCHE
+// ==========================================
+let searchTimeout = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search-input');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                hideSearchResults();
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => searchAssets(query), 300);
+        });
+    }
 });
 
-function showSearchResults(results) {
-    const container = document.getElementById('search-results');
+function searchAssets(query) {
+    if (!assetsData || !assetsData.features) return;
     
-    if (results.length === 0) {
-        container.innerHTML = '<div class="search-result-item text-gray-500">Aucun résultat trouvé</div>';
+    const results = assetsData.features
+        .filter(f => {
+            const props = f.properties || {};
+            const nom = (props.nom || '').toLowerCase();
+            const ref = (props.reference || '').toLowerCase();
+            return nom.includes(query.toLowerCase()) || ref.includes(query.toLowerCase());
+        })
+        .slice(0, 10); // Limiter à 10 résultats
+    
+    showSearchResults(results);
+}
+
+function showSearchResults(features) {
+    const container = document.getElementById('search-results');
+    if (!container) return;
+    
+    if (features.length === 0) {
+        container.innerHTML = '<div class="p-3 text-gray-500">Aucun résultat</div>';
     } else {
-        container.innerHTML = results.map(result => `
-            <div class="search-result-item" onclick="selectSearchResult(${result.latitude}, ${result.longitude}, ${result.id})">
-                <div class="font-medium">${result.nom}</div>
-                <div class="text-sm text-gray-600">${result.categorie} • ${result.reference || 'Pas de ref'}</div>
-                <div class="text-xs text-gray-500">${result.adresse || 'Adresse non définie'}</div>
-            </div>
-        `).join('');
+        container.innerHTML = features.map(feature => {
+            const props = feature.properties || {};
+            const coords = feature.geometry.coordinates;
+            
+            return `
+                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer" onclick="selectResult(${coords[1]}, ${coords[0]}, ${props.id})">
+                    <div class="font-medium">${props.nom || 'Asset'}</div>
+                    <div class="text-sm text-gray-600">${props.reference || ''}</div>
+                </div>
+            `;
+        }).join('');
     }
     
     container.classList.remove('hidden');
 }
 
 function hideSearchResults() {
-    document.getElementById('search-results').classList.add('hidden');
-}
-
-function selectSearchResult(lat, lng, assetId) {
-    map.setView([lat, lng], 16);
-    hideSearchResults();
-    document.getElementById('search-input').value = '';
-    
-    // Ouvrir la popup de l'asset
-    setTimeout(() => {
-        showAssetDetails(assetId);
-    }, 500);
-}
-
-// Gestion sidebar
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('open');
-}
-
-function openSidebar() {
-    document.getElementById('sidebar').classList.add('open');
-}
-
-function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-}
-
-// Autres fonctions utilitaires
-function centerOnAsset(lat, lng) {
-    map.setView([lat, lng], 16);
-}
-
-function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
-    } else {
-        document.exitFullscreen();
+    const container = document.getElementById('search-results');
+    if (container) {
+        container.classList.add('hidden');
     }
 }
 
+function selectResult(lat, lng, assetId) {
+    if (map && !isNaN(lat) && !isNaN(lng)) {
+        map.setView([lat, lng], 15);
+    }
+    
+    hideSearchResults();
+    document.getElementById('search-input').value = '';
+    
+    if (assetId) {
+        setTimeout(() => showDetails(assetId), 500);
+    }
+}
+
+// ==========================================
+// AUTRES FONCTIONS
+// ==========================================
+function refreshPage() {
+    location.reload();
+}
+
+function centrerSurAssets() {
+    console.log('🎯 Centrage automatique sur les assets...');
+    
+    if (!assetsData || !assetsData.features || assetsData.features.length === 0) {
+        console.log('❌ Aucun asset pour centrage');
+        return;
+    }
+    
+    // Calculer les bounds des assets
+    let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+    
+    assetsData.features.forEach(feature => {
+        const coords = feature.geometry.coordinates;
+        const lat = coords[1];
+        const lng = coords[0];
+        
+        minLat = Math.min(minLat, lat);
+        maxLat = Math.max(maxLat, lat);
+        minLng = Math.min(minLng, lng);
+        maxLng = Math.max(maxLng, lng);
+    });
+    
+    console.log(`📊 Bounds calculés: lat[${minLat}, ${maxLat}], lng[${minLng}, ${maxLng}]`);
+    
+    // Centrer la carte sur tous les assets
+    const bounds = [[minLat, minLng], [maxLat, maxLng]];
+    map.fitBounds(bounds, { padding: [50, 50] });
+    
+    console.log('✅ Carte centrée sur tous les assets');
+}
+
+function debugCarte() {
+    console.log('🔧 DIAGNOSTIC COMPLET DE LA CARTE:');
+    console.log('- Objet map:', map);
+    console.log('- Container map:', document.getElementById('map'));
+    console.log('- Dimensions container:', document.getElementById('map').getBoundingClientRect());
+    console.log('- Assets data:', assetsData);
+    console.log('- Centre carte:', map ? map.getCenter() : 'MAP NON DÉFINIE');
+    console.log('- Zoom carte:', map ? map.getZoom() : 'MAP NON DÉFINIE');
+    
+    if (map) {
+        console.log('🔄 Tentative de réparation...');
+        map.invalidateSize();
+        setTimeout(() => {
+            map.invalidateSize();
+            console.log('✅ Carte réparée');
+        }, 100);
+    }
+    
+    alert('Voir console pour diagnostic complet');
+}
+
 function editAsset(assetId) {
-    window.open(`/assets/${assetId}/`, '_blank');
+    if (assetId) {
+        window.open(`/admin/core/asset/${assetId}/change/`, '_blank');
+    }
 }
 
-function createIntervention(assetId) {
-    window.open(`/ordres-travail/creer/?asset=${assetId}`, '_blank');
-}
-
-// Fermer la recherche si on clique ailleurs
+// Fermer recherche au clic extérieur
 document.addEventListener('click', function(e) {
-    if (!document.getElementById('search-input').contains(e.target)) {
+    const searchInput = document.getElementById('search-input');
+    const searchResults = document.getElementById('search-results');
+    
+    if (searchInput && searchResults && 
+        !searchInput.contains(e.target) && 
+        !searchResults.contains(e.target)) {
         hideSearchResults();
     }
 });
 
-// Initialiser la carte au chargement
-document.addEventListener('DOMContentLoaded', initMap);
+// ==========================================
+// INITIALISATION
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Démarrage carte FTTH');
+    
+    setTimeout(() => {
+        try {
+            initMap();
+        } catch (error) {
+            console.error('💥 Erreur fatale:', error);
+            alert('Erreur fatale: ' + error.message);
+        }
+    }, 100);
+});
 </script>
 {% endblock %}
