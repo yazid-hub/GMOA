@@ -1,4 +1,290 @@
-{% extends 'core/base.html' %}
+function createEquipmentFromForm() {
+    if (!pendingEquipment) return;
+    
+    // Récupérer les données du formulaire
+    const formData = {
+        type: document.getElementById('equipment-type').value,
+        name: document.getElementById('equipment-name').value,
+        reference: document.getElementById('equipment-reference').value,
+        brand: document.getElementById('equipment-brand').value,
+        model: document.getElementById('equipment-model').value,
+        location: document.getElementById('equipment-location').value,
+        latitude: parseFloat(document.getElementById('equipment-lat').value),
+        longitude: parseFloat(document.getElementById('equipment-lng').value),
+        fibers_total: document.getElementById('equipment-fibers-total').value,
+        fibers_used: document.getElementById('equipment-fibers-used').value,
+        connector: document.getElementById('equipment-connector').value,
+        status: document.getElementById('equipment-status').value,
+        criticality: document.getElementById('equipment-criticality').value,
+        service_date: document.getElementById('equipment-service-date').value,
+        warranty_end: document.getElementById('equipment-warranty-end').value,
+        notes: document.getElementById('equipment-notes').value
+    };
+    
+    console.log('📊 Données équipement:', formData);
+    
+    // Créer le marqueur temporaire sur la carte
+    const tempMarker = createTemporaryMarker(formData);
+    
+    // Sauvegarder en base de données
+    saveEquipmentToDB(formData, tempMarker);
+    
+    // Fermer le formulaire
+    closeEquipmentForm();
+    
+    // Désactiver le mode outil
+    deactivateToolMode();
+}
+
+function createTemporaryMarker(formData) {
+    const marker = L.marker(pendingEquipment.latlng, {
+        icon: L.divIcon({
+            html: `<div style="background: ${pendingEquipment.color}; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                     <i class="${pendingEquipment.iconClass}" style="color: white; font-size: 12px;"></i>
+                   </div>`,
+            className: 'ftth-equipment-marker',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        })
+    });
+    
+    // Stocker les données complètes
+    marker.equipmentData = {
+        ...formData,
+        id: Date.now(), // ID temporaire
+        latlng: pendingEquipment.latlng,
+        color: pendingEquipment.color,
+        iconClass: pendingEquipment.iconClass,
+        saved: false // Marqueur non sauvegardé
+    };
+    
+    // Popup temporaire
+    marker.bindPopup(`
+        <div style="text-align: center;">
+            <h4>${formData.name}</h4>
+            <p><strong>Type:</strong> ${formData.type}</p>
+            <p><strong>Statut:</strong> En cours de sauvegarde...</p>
+            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mx-auto mt-2"></div>
+        </div>
+    `);
+    
+    // Gestion des clics pour câblage
+    marker.on('click', function(e) {
+        if (currentToolMode === 'cable') {
+            e.originalEvent.stopPropagation();
+            marker.closePopup();
+            addEquipmentToCable(marker);
+            return false;
+        }
+    });
+    
+    drawingLayer.addLayer(marker);
+    return marker;
+}
+
+// Fonction de sauvegarde en base de données
+function saveEquipmentToDB(formData, tempMarker) {
+    const equipmentData = {
+        type: formData.type,
+        name: formData.name,
+        reference: formData.reference || formData.name,
+        brand: formData.brand,
+        model: formData.model,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        status: formData.status,
+        criticality: formData.criticality,
+        address: formData.location,
+        fibers: parseInt(formData.fibers_total) || null,
+        fibers_used: parseInt(formData.fibers_used) || 0,
+        connector: formData.connector,
+        service_date: formData.service_date,
+        warranty_end: formData.warranty_end,
+        notes: formData.notes
+    };
+    
+    console.log('💾 Sauvegarde en cours...', equipmentData);
+    
+    // Appel AJAX vers Django
+    fetch('/api/ftth/equipment/create/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(equipmentData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Sauvegarde réussie
+            console.log('✅ Équipement sauvegardé:', data);
+            
+            // Mettre à jour le marqueur
+            tempMarker.equipmentData.id = data.asset_id;
+            tempMarker.equipmentData.saved = true;
+            
+            // Mettre à jour la popup
+            updateEquipmentPopup(tempMarker, formData, data.asset_id);
+            
+            // Notification de succès
+            showNotification('success', `Équipement ${formData.name} créé avec succès`);
+            
+        } else {
+            // Erreur de sauvegarde
+            console.error('❌ Erreur sauvegarde:', data.error);
+            showNotification('error', `Erreur: ${data.error}`);
+            
+            // Marquer comme erreur
+            tempMarker.equipmentData.saved = false;
+            tempMarker.equipmentData.error = data.error;
+            
+            // Popup d'erreur
+            tempMarker.bindPopup(`
+                <div style="text-align: center;">
+                    <h4>${formData.name}</h4>
+                    <p style="color: red;"><strong>Erreur:</strong> ${data.error}</p>
+                    <div style="margin-top: 8px;">
+                        <button onclick="retryEquipmentSave(${tempMarker.equipmentData.id})" style="background: #f59e0b; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
+                            🔄 Réessayer
+                        </button>
+                        <button onclick="deleteTemporaryEquipment(${tempMarker.equipmentData.id})" style="background: #ef4444; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
+                            🗑️ Supprimer
+                        </button>
+                    </div>
+                </div>
+            `);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erreur réseau:', error);
+        showNotification('error', 'Erreur de connexion au serveur');
+        
+        tempMarker.equipmentData.saved = false;
+        tempMarker.equipmentData.error = 'Erreur réseau';
+        
+        tempMarker.bindPopup(`
+            <div style="text-align: center;">
+                <h4>${formData.name}</h4>
+                <p style="color: red;"><strong>Erreur réseau</strong></p>
+                <button onclick="retryEquipmentSave(${tempMarker.equipmentData.id})" style="background: #f59e0b; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer;">
+                    🔄 Réessayer
+                </button>
+            </div>
+        `);
+    });
+}
+
+function updateEquipmentPopup(marker, formData, assetId) {
+    const fibersInfo = formData.fibers_total ? 
+        `<p><strong>Fibres:</strong> ${formData.fibers_used || 0}/${formData.fibers_total}</p>` : '';
+    
+    const popup = `
+        <div style="text-align: center;">
+            <h4>${formData.name}</h4>
+            <p><strong>Type:</strong> ${formData.type}</p>
+            <p><strong>Statut:</strong> ${formData.status}</p>
+            ${fibersInfo}
+            <div style="margin-top: 8px;">
+                <button onclick="editEquipment(${assetId})" style="background: #3b82f6; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
+                    ✏️ Modifier
+                </button>
+                <button onclick="deleteEquipment(${assetId})" style="background: #ef4444; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
+                    🗑️ Supprimer
+                </button>
+            </div>
+        </div>
+    `;
+    
+    marker.bindPopup(popup);
+}
+
+// Fonction pour récupérer le token CSRF Django
+function getCsrfToken() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return value;
+        }
+    }
+    return '';
+}
+
+// Système de notifications
+function showNotification(type, message) {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-4 py-3 rounded-lg shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-500 text-white' : 
+        type === 'error' ? 'bg-red-500 text-white' : 
+        'bg-blue-500 text-white'
+    }`;
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
+// Fonctions utilitaires
+function retryEquipmentSave(equipmentId) {
+    // Retrouver le marqueur et réessayer la sauvegarde
+    drawingLayer.eachLayer(function(layer) {
+        if (layer.equipmentData && layer.equipmentData.id === equipmentId) {
+            saveEquipmentToDB(layer.equipmentData, layer);
+        }
+    });
+}
+
+function deleteTemporaryEquipment(equipmentId) {
+    drawingLayer.eachLayer(function(layer) {
+        if (layer.equipmentData && layer.equipmentData.id === equipmentId) {
+            drawingLayer.removeLayer(layer);
+            console.log('🗑️ Équipement temporaire supprimé');
+        }
+    });
+}
+
+function editEquipment(assetId) {
+    // TODO: Implémenter l'édition
+    console.log('✏️ Édition équipement:', assetId);
+    alert(`Édition équipement ID: ${assetId}`);
+}
+
+function deleteEquipment(assetId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet équipement ?')) {
+        return;
+    }
+    
+    fetch(`/api/ftth/equipment/${assetId}/delete/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('success', data.message);
+            
+            // Supprimer de la carte
+            drawingLayer.eachLayer(function(layer) {
+                if (layer.equipmentData && layer.equipmentData.id === assetId) {
+                    drawingLayer.removeLayer(layer);
+                }
+            });
+        } else {
+            showNotification('error', data.error);
+        }
+    })
+    .{% extends 'core/base.html' %}
 {% load static %}
 
 {% block title %}Carte FTTH - Assets{% endblock %}
@@ -284,10 +570,10 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Criticité *</label>
                     <select id="equipment-criticality" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                        <option value="1">Basse</option>
-                        <option value="2" selected>Moyenne</option>
-                        <option value="3">Haute</option>
-                        <option value="4">Critique</option>
+                        <option value="FAIBLE">Faible</option>
+                        <option value="MOYENNE" selected>Moyenne</option>
+                        <option value="HAUTE">Haute</option>
+                        <option value="CRITIQUE">Critique</option>
                     </select>
                 </div>
 
@@ -595,37 +881,19 @@ function createEquipmentFromForm() {
     const formData = {
         type: document.getElementById('equipment-type').value,
         name: document.getElementById('equipment-name').value,
-        reference: document.getElementById('equipment-reference').value,
-        brand: document.getElementById('equipment-brand').value,
-        model: document.getElementById('equipment-model').value,
-        location: document.getElementById('equipment-location').value,
+        address: document.getElementById('equipment-address').value,
         latitude: parseFloat(document.getElementById('equipment-lat').value),
         longitude: parseFloat(document.getElementById('equipment-lng').value),
-        fibers_total: document.getElementById('equipment-fibers-total').value,
-        fibers_used: document.getElementById('equipment-fibers-used').value,
+        fibers: document.getElementById('equipment-fibers').value,
         connector: document.getElementById('equipment-connector').value,
         status: document.getElementById('equipment-status').value,
         criticality: document.getElementById('equipment-criticality').value,
-        service_date: document.getElementById('equipment-service-date').value,
-        warranty_end: document.getElementById('equipment-warranty-end').value,
         notes: document.getElementById('equipment-notes').value
     };
     
     console.log('📊 Données équipement:', formData);
     
-    // Créer le marqueur temporaire sur la carte
-    const tempMarker = createTemporaryMarker(formData);
-    
-    // Sauvegarder en base de données
-    saveEquipmentToDB(formData, tempMarker);
-    
-    // Fermer le formulaire
-    closeEquipmentForm();
-    
-    // Désactiver le mode outil
-    deactivateToolMode();
-}
-function createTemporaryMarker(formData) {
+    // Créer le marqueur sur la carte
     const marker = L.marker(pendingEquipment.latlng, {
         icon: L.divIcon({
             html: `<div style="background: ${pendingEquipment.color}; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
@@ -640,39 +908,56 @@ function createTemporaryMarker(formData) {
     // Stocker les données complètes
     marker.equipmentData = {
         ...formData,
-        id: Date.now(), // ID temporaire
+        id: Date.now(),
         latlng: pendingEquipment.latlng,
         color: pendingEquipment.color,
-        iconClass: pendingEquipment.iconClass,
-        saved: false // Marqueur non sauvegardé
+        iconClass: pendingEquipment.iconClass
     };
     
-    // Popup temporaire
-    marker.bindPopup(`
+    // Créer la popup mais ne pas l'attacher tout de suite
+    const popupContent = `
         <div style="text-align: center;">
             <h4>${formData.name}</h4>
             <p><strong>Type:</strong> ${formData.type}</p>
-            <p><strong>Statut:</strong> En cours de sauvegarde...</p>
-            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mx-auto mt-2"></div>
+            <p><strong>Statut:</strong> ${formData.status}</p>
+            ${formData.fibers ? `<p><strong>Fibres:</strong> ${formData.fibers}</p>` : ''}
+            <div style="margin-top: 8px;">
+                <button onclick="saveEquipmentToDB(${marker.equipmentData.id})" style="background: #16a34a; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
+                    💾 Sauvegarder
+                </button>
+                <button onclick="editEquipment(${marker.equipmentData.id})" style="background: #3b82f6; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
+                    ✏️ Modifier
+                </button>
+            </div>
         </div>
-    `);
+    `;
     
-    // Gestion des clics pour câblage
+    marker.bindPopup(popupContent);
+    
+    // Gestion intelligente des clics selon le mode
     marker.on('click', function(e) {
         if (currentToolMode === 'cable') {
+            // Mode câble : empêcher la popup et faire le raccordement
             e.originalEvent.stopPropagation();
-            marker.closePopup();
+            marker.closePopup(); // Fermer si ouverte
             addEquipmentToCable(marker);
             return false;
+        } else {
+            // Mode normal : popup normale
+            // La popup s'ouvrira automatiquement
         }
     });
     
     drawingLayer.addLayer(marker);
-    return marker;
+    
+    // Fermer le formulaire
+    closeEquipmentForm();
+    
+    // Désactiver le mode outil
+    deactivateToolMode();
+    
+    console.log(`✅ Équipement ${formData.name} créé sur la carte`);
 }
-
-
-
 
 // Variables pour l'édition avancée
 let cableSegments = [];
@@ -1400,209 +1685,10 @@ function deactivateToolMode() {
 }
 
 // Fonctions de sauvegarde (à implémenter côté Django)
-function saveEquipmentToDB(formData, tempMarker) {
-    const equipmentData = {
-        type: formData.type,
-        name: formData.name,
-        reference: formData.reference || formData.name,
-        brand: formData.brand,
-        model: formData.model,
-        latitude: formData.latitude,
-        longitude: formData.longitude,
-        status: formData.status,
-        criticality: formData.criticality,
-        address: formData.location,
-        fibers: parseInt(formData.fibers_total) || null,
-        fibers_used: parseInt(formData.fibers_used) || 0,
-        connector: formData.connector,
-        service_date: formData.service_date,
-        warranty_end: formData.warranty_end,
-        notes: formData.notes
-    };
-    
-    console.log('💾 Sauvegarde en cours...', equipmentData);
-    
-    // Appel AJAX vers Django
-    fetch('/api/ftth/equipment/create/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify(equipmentData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Sauvegarde réussie
-            console.log('✅ Équipement sauvegardé:', data);
-            
-            // Mettre à jour le marqueur
-            tempMarker.equipmentData.id = data.asset_id;
-            tempMarker.equipmentData.saved = true;
-            
-            // Mettre à jour la popup
-            updateEquipmentPopup(tempMarker, formData, data.asset_id);
-            
-            // Notification de succès
-            showNotification('success', `Équipement ${formData.name} créé avec succès`);
-            
-        } else {
-            // Erreur de sauvegarde
-            console.error('❌ Erreur sauvegarde:', data.error);
-            showNotification('error', `Erreur: ${data.error}`);
-            
-            // Marquer comme erreur
-            tempMarker.equipmentData.saved = false;
-            tempMarker.equipmentData.error = data.error;
-            
-            // Popup d'erreur
-            tempMarker.bindPopup(`
-                <div style="text-align: center;">
-                    <h4>${formData.name}</h4>
-                    <p style="color: red;"><strong>Erreur:</strong> ${data.error}</p>
-                    <div style="margin-top: 8px;">
-                        <button onclick="retryEquipmentSave(${tempMarker.equipmentData.id})" style="background: #f59e0b; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                            🔄 Réessayer
-                        </button>
-                        <button onclick="deleteTemporaryEquipment(${tempMarker.equipmentData.id})" style="background: #ef4444; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                            🗑️ Supprimer
-                        </button>
-                    </div>
-                </div>
-            `);
-        }
-    })
-    .catch(error => {
-        console.error('❌ Erreur réseau:', error);
-        showNotification('error', 'Erreur de connexion au serveur');
-        
-        tempMarker.equipmentData.saved = false;
-        tempMarker.equipmentData.error = 'Erreur réseau';
-        
-        tempMarker.bindPopup(`
-            <div style="text-align: center;">
-                <h4>${formData.name}</h4>
-                <p style="color: red;"><strong>Erreur réseau</strong></p>
-                <button onclick="retryEquipmentSave(${tempMarker.equipmentData.id})" style="background: #f59e0b; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer;">
-                    🔄 Réessayer
-                </button>
-            </div>
-        `);
-    });
-}
-
-function updateEquipmentPopup(marker, formData, assetId) {
-    const fibersInfo = formData.fibers_total ? 
-        `<p><strong>Fibres:</strong> ${formData.fibers_used || 0}/${formData.fibers_total}</p>` : '';
-    
-    const popup = `
-        <div style="text-align: center;">
-            <h4>${formData.name}</h4>
-            <p><strong>Type:</strong> ${formData.type}</p>
-            <p><strong>Statut:</strong> ${formData.status}</p>
-            ${fibersInfo}
-            <div style="margin-top: 8px;">
-                <button onclick="editEquipment(${assetId})" style="background: #3b82f6; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    ✏️ Modifier
-                </button>
-                <button onclick="deleteEquipment(${assetId})" style="background: #ef4444; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">
-                    🗑️ Supprimer
-                </button>
-            </div>
-        </div>
-    `;
-    
-    marker.bindPopup(popup);
-}
-
-// Fonction pour récupérer le token CSRF Django
-function getCsrfToken() {
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === 'csrftoken') {
-            return value;
-        }
-    }
-    return '';
-}
-
-// Système de notifications
-function showNotification(type, message) {
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 px-4 py-3 rounded-lg shadow-lg z-50 ${
-        type === 'success' ? 'bg-green-500 text-white' : 
-        type === 'error' ? 'bg-red-500 text-white' : 
-        'bg-blue-500 text-white'
-    }`;
-    notification.innerHTML = `
-        <div class="flex items-center">
-            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'} mr-2"></i>
-            <span>${message}</span>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 5000);
-}
-
-
-
-// Fonctions utilitaires
-function retryEquipmentSave(equipmentId) {
-    // Retrouver le marqueur et réessayer la sauvegarde
-    drawingLayer.eachLayer(function(layer) {
-        if (layer.equipmentData && layer.equipmentData.id === equipmentId) {
-            saveEquipmentToDB(layer.equipmentData, layer);
-        }
-    });
-}
-
-function deleteTemporaryEquipment(equipmentId) {
-    drawingLayer.eachLayer(function(layer) {
-        if (layer.equipmentData && layer.equipmentData.id === equipmentId) {
-            drawingLayer.removeLayer(layer);
-            console.log('🗑️ Équipement temporaire supprimé');
-        }
-    });
-}
-
-function editEquipment(assetId) {
-    // TODO: Implémenter l'édition
-    console.log('✏️ Édition équipement:', assetId);
-    alert(`Édition équipement ID: ${assetId}`);
-}
-
-function deleteEquipment(assetId) {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet équipement ?')) {
-        return;
-    }
-    
-    fetch(`/api/ftth/equipment/${assetId}/delete/`, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRFToken': getCsrfToken()
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification('success', data.message);
-            
-            // Supprimer de la carte
-            drawingLayer.eachLayer(function(layer) {
-                if (layer.equipmentData && layer.equipmentData.id === assetId) {
-                    drawingLayer.removeLayer(layer);
-                }
-            });
-        } else {
-            showNotification('error', data.error);
-        }
-    })
+function saveEquipmentToDB(type, lat, lng) {
+    console.log(`💾 Sauvegarde ${type} en base:`, { type, lat, lng });
+    // TODO: Appel AJAX vers Django pour créer l'asset
+    alert(`Équipement ${type} à sauvegarder\nLat: ${lat}\nLng: ${lng}`);
 }
 
 function saveCableToDB() {
@@ -1642,40 +1728,22 @@ function showDetails(assetId) {
     const content = document.getElementById('sidebar-content');
     if (!content) return;
     
-       const asset = findAssetById(assetId);
-
-        if (asset) {
-            // Vérifie si point_geojson est un objet ou une chaîne JSON
-            let point = null;
-
-            try {
-                point = typeof asset.point_geojson === 'string'
-                    ? JSON.parse(asset.point_geojson)
-                    : asset.point_geojson;
-                    console.log(point);
-                    console.log(asset);
-            } catch (e) {
-                console.warn("Erreur lors du parsing de point_geojson:", e);
-            }
-
-            const coordinatesText = point?.type === 'Point' && Array.isArray(point.coordinates)
-                ? `${point.coordinates[1]}, ${point.coordinates[0]}` // lat, lon
-                : 'N/A';
-
-            content.innerHTML = `
-                <div>
-                    <h3 class="text-lg font-bold mb-2">${asset.nom || 'Asset'}</h3>
-                    <div class="space-y-2 text-sm">
-                        <p><strong>Référence:</strong> ${asset.reference || 'N/A'}</p>
-                        <p><strong>Catégorie:</strong> ${asset.categorie || 'N/A'}</p>
-                        <p><strong>Statut:</strong> ${asset.statut || 'N/A'}</p>
-                        <p><strong>Localisation:</strong> ${coordinatesText}</p>
-                    </div>
+    const asset = findAssetById(assetId);
+    if (asset) {
+        content.innerHTML = `
+            <div>
+                <h3 class="text-lg font-bold mb-2">${asset.nom || 'Asset'}</h3>
+                <div class="space-y-2 text-sm">
+                    <p><strong>Référence:</strong> ${asset.reference || 'N/A'}</p>
+                    <p><strong>Catégorie:</strong> ${asset.categorie || 'N/A'}</p>
+                    <p><strong>Statut:</strong> ${asset.statut || 'N/A'}</p>
+                    <p><strong>Localisation:</strong> ${asset.localisation || 'N/A'}</p>
                 </div>
-            `;
-        } else {
-            content.innerHTML = '<p class="text-red-500">Asset non trouvé</p>';
-        }
+            </div>
+        `;
+    } else {
+        content.innerHTML = '<p class="text-red-500">Asset non trouvé</p>';
+    }
     
     toggleSidebar();
 }
@@ -1722,6 +1790,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 100);
 });
-
 </script>
 {% endblock %}

@@ -28,6 +28,7 @@ from django.utils import timezone
 from django.conf import settings
 # core/views_suppression.py
 # Vues pour la suppression des opérations et points de contrôle
+# À ajouter dans core/views.py
 
 from django.db import transaction
 from .models import Operation, PointDeControle, Intervention, Reponse
@@ -3504,7 +3505,11 @@ def carte_ftth(request):
                         "attributs": attributs,
                         "photo": asset.photo_principale.url if asset.photo_principale else None,
                         "derniere_maintenance": asset.derniere_maintenance.isoformat() if asset.derniere_maintenance else None,
-                        "prochaine_maintenance": asset.prochaine_maintenance.isoformat() if asset.prochaine_maintenance else None
+                        "prochaine_maintenance": asset.prochaine_maintenance.isoformat() if asset.prochaine_maintenance else None,
+                        "point_geojson": {
+                        "type": "Point",
+                        "coordinates": [float(asset.longitude), float(asset.latitude)]
+                    }
                     }
                 }
                 
@@ -3674,6 +3679,7 @@ def asset_details_ajax(request, asset_id):
                 'statut': asset.get_statut_display(),
                 'criticite': asset.get_criticite_display(),
                 'localisation': asset.localisation_texte or "",
+                'Geometrie_geojson': asset.geometrie_geojson or "",
                 'adresse': asset.adresse_complete or "",
                 'photo': asset.photo_principale.url if asset.photo_principale else None,
                 'derniere_maintenance': asset.derniere_maintenance.strftime('%d/%m/%Y %H:%M') if asset.derniere_maintenance else None,
@@ -3766,4 +3772,484 @@ def api_assets_search(request):
         return JsonResponse({
             'results': [],
             'error': 'Erreur lors de la recherche'
+        }, status=500)
+    
+
+
+
+
+def get_hierarchy_level(equipment_type):
+    """
+    Retourne le niveau hiérarchique selon le type d'équipement
+    """
+    hierarchy = {
+        'NRO': 1,
+        'PM': 2,
+        'PB': 3,
+        'PTO': 4
+    }
+    return hierarchy.get(equipment_type, 1)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_cable_api(request):
+    """
+    API pour créer un câble/segment depuis la carte
+    """
+    try:
+        data = json.loads(request.body)
+        
+        # Validation
+        required_fields = ['points', 'startRef', 'endRef']
+        for field in required_fields:
+            if field not in data:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Champ requis manquant: {field}'
+                }, status=400)
+        
+        # Créer ou récupérer la zone géographique
+        zone, created = ZoneGeographique.objects.get_or_create(
+            nom=data.get('zone', 'Zone par défaut'),
+            defaults={
+                'code_postal': '00000',
+                'commune': 'Non définie',
+                'type_zone': 'ZONE_DENSE',
+                'contour_geojson': {}
+            }
+        )
+        
+        # Préparer la géométrie GeoJSON
+        coordinates = [[point['lng'], point['lat']] for point in data['points']]
+        geometry_geojson = {
+            "type": "LineString",
+            "coordinates": coordinates
+        }
+        
+        # Créer le plan/schéma pour le câble
+        plan = PlanSchema.objects.create(
+            nom=data.get('name', f"Câble {data['startRef']} - {data['endRef']}"),
+            zone_geographique=zone,
+            type_plan='SCHEMA_RACCORDEMENT',
+            emprise_geojson=geometry_geojson,
+            version="1.0"
+        )
+        
+        # Associer les assets concernés si ils existent
+        if data.get('startAssetId'):
+            try:
+                start_asset = Asset.objects.get(id=data['startAssetId'])
+                plan.assets_concernes.add(start_asset)
+            except Asset.DoesNotExist:
+                pass
+                
+        if data.get('endAssetId'):
+            try:
+                end_asset = Asset.objects.get(id=data['endAssetId'])
+                plan.assets_concernes.add(end_asset)
+            except Asset.DoesNotExist:
+                pass
+        
+        # Optionnel: Créer un asset pour le câble lui-même
+        if data.get('createAsset', True):
+            cable_category, created = CategorieAsset.objects.get_or_create(
+                nom='Câble FTTH'
+            )
+            
+            cable_asset = Asset.objects.create(
+                nom=plan.nom,
+                reference=f"CBL-{plan.id}",
+                categorie=cable_category,
+                statut='EN_SERVICE',
+                criticite='MOYENNE',
+                geometrie_geojson=geometry_geojson,
+                nb_fibres_total=data.get('fiberCount', 12),
+                type_connecteur=data.get('cableType', 'LC')
+            )
+            
+            plan.assets_concernes.add(cable_asset)
+        
+        return JsonResponse({
+            'success': True,
+            'plan_id': plan.id,
+            'cable_asset_id': cable_asset.id if 'cable_asset' in locals() else None,
+            'message': f'Câble {plan.nom} créé avec succès',
+            'length': data.get('distance', 0)
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Données JSON invalides'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        }, status=500)
+
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_equipment_api(request, asset_id):
+    """
+    API pour supprimer un équipement
+    """
+    try:
+        asset = Asset.objects.get(id=asset_id)
+        asset_name = asset.nom
+        asset.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Équipement {asset_name} supprimé'
+        })
+        
+    except Asset.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Équipement non trouvé'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur: {str(e)}'
+        }, status=500)
+    
+
+
+# À ajouter dans core/views.py
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import json
+from decimal import Decimal
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_equipment_api(request):
+    """
+    API pour créer un nouvel équipement depuis la carte
+    """
+    try:
+        data = json.loads(request.body)
+        
+        # Validation des données
+        required_fields = ['type', 'name', 'latitude', 'longitude', 'status']
+        for field in required_fields:
+            if field not in data:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Champ requis manquant: {field}'
+                }, status=400)
+        
+        # Déterminer la catégorie selon le type
+        type_to_category = {
+            'NRO': 'NRO',
+            'PM': 'Point de Mutualisation', 
+            'PB': 'Point de Branchement',
+            'PTO': 'Prise Terminale Optique'
+        }
+        
+        category_name = type_to_category.get(data['type'], 'Équipement FTTH')
+        category, created = CategorieAsset.objects.get_or_create(nom=category_name)
+        
+        # Créer l'asset
+        asset = Asset.objects.create(
+            nom=data['name'],
+            reference=data.get('reference', data['name']),
+            categorie=category,
+            marque=data.get('brand', ''),
+            modele=data.get('model', ''),
+            statut=data['status'],
+            criticite=data.get('criticality', 'MOYENNE'),
+            latitude=Decimal(str(data['latitude'])),
+            longitude=Decimal(str(data['longitude'])),
+            localisation_texte=data.get('location', ''),
+            date_mise_en_service=data.get('service_date') or None,
+            fin_garantie=data.get('warranty_end') or None,
+            
+            # Champs FTTH spécifiques
+            nb_fibres_total=data.get('fibers_total', None),
+            nb_fibres_utilisees=data.get('fibers_used', 0),
+            type_connecteur=data.get('connector', ''),
+            niveau_hierarchique=get_hierarchy_level(data['type'])
+        )
+        
+        # La géométrie sera automatiquement mise à jour par la méthode save()
+        
+        # Ajouter des attributs personnalisés si nécessaire
+        if data.get('notes'):
+            AttributPersonnaliseAsset.objects.create(
+                asset=asset,
+                cle='Notes',
+                valeur=data['notes']
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'asset_id': asset.id,
+            'coordinates': asset.coordinates_dict,
+            'point_geojson': asset.point_geojson,
+            'message': f'Équipement {asset.nom} créé avec succès'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Données JSON invalides'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        }, status=500)
+
+
+def get_hierarchy_level(equipment_type):
+    """
+    Retourne le niveau hiérarchique selon le type d'équipement
+    """
+    hierarchy = {
+        'NRO': 1,
+        'PM': 2,
+        'PB': 3,
+        'PTO': 4
+    }
+    return hierarchy.get(equipment_type, 1)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_cable_api(request):
+    """
+    API pour créer un câble/segment depuis la carte
+    """
+    try:
+        data = json.loads(request.body)
+        
+        # Validation
+        required_fields = ['points', 'startRef', 'endRef']
+        for field in required_fields:
+            if field not in data:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Champ requis manquant: {field}'
+                }, status=400)
+        
+        # Créer ou récupérer la zone géographique
+        zone, created = ZoneGeographique.objects.get_or_create(
+            nom=data.get('zone', 'Zone par défaut'),
+            defaults={
+                'code_postal': '00000',
+                'commune': 'Non définie',
+                'type_zone': 'ZONE_DENSE',
+                'contour_geojson': {}
+            }
+        )
+        
+        # Préparer la géométrie GeoJSON
+        coordinates = [[point['lng'], point['lat']] for point in data['points']]
+        geometry_geojson = {
+            "type": "LineString",
+            "coordinates": coordinates
+        }
+        
+        # Créer le plan/schéma pour le câble
+        plan = PlanSchema.objects.create(
+            nom=data.get('name', f"Câble {data['startRef']} - {data['endRef']}"),
+            zone_geographique=zone,
+            type_plan='SCHEMA_RACCORDEMENT',
+            emprise_geojson=geometry_geojson,
+            version="1.0"
+        )
+        
+        # Associer les assets concernés si ils existent
+        if data.get('startAssetId'):
+            try:
+                start_asset = Asset.objects.get(id=data['startAssetId'])
+                plan.assets_concernes.add(start_asset)
+            except Asset.DoesNotExist:
+                pass
+                
+        if data.get('endAssetId'):
+            try:
+                end_asset = Asset.objects.get(id=data['endAssetId'])
+                plan.assets_concernes.add(end_asset)
+            except Asset.DoesNotExist:
+                pass
+        
+        # Optionnel: Créer un asset pour le câble lui-même
+        if data.get('createAsset', True):
+            cable_category, created = CategorieAsset.objects.get_or_create(
+                nom='Câble FTTH'
+            )
+            
+            cable_asset = Asset.objects.create(
+                nom=plan.nom,
+                reference=f"CBL-{plan.id}",
+                categorie=cable_category,
+                statut='EN_SERVICE',
+                criticite='MOYENNE',
+                geometrie_geojson=geometry_geojson,
+                nb_fibres_total=data.get('fiberCount', 12),
+                type_connecteur=data.get('cableType', 'LC')
+            )
+            
+            plan.assets_concernes.add(cable_asset)
+        
+        return JsonResponse({
+            'success': True,
+            'plan_id': plan.id,
+            'cable_asset_id': cable_asset.id if 'cable_asset' in locals() else None,
+            'message': f'Câble {plan.nom} créé avec succès',
+            'length': data.get('distance', 0)
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Données JSON invalides'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+def update_equipment_api(request, asset_id):
+    """
+    API pour modifier un équipement
+    """
+    try:
+        asset = Asset.objects.get(id=asset_id)
+        data = json.loads(request.body)
+        
+        # Mise à jour des champs
+        if 'name' in data:
+            asset.nom = data['name']
+        if 'status' in data:
+            asset.statut = data['status']
+        if 'criticality' in data:
+            asset.criticite = data['criticality']
+        if 'fibers' in data:
+            asset.nb_fibres_total = data['fibers']
+        if 'connector' in data:
+            asset.type_connecteur = data['connector']
+            
+        asset.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Équipement {asset.nom} mis à jour'
+        })
+        
+    except Asset.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Équipement non trouvé'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def find_nearby_equipment_api(request):
+    """
+    API pour trouver les équipements proches d'un point
+    """
+    try:
+        latitude = float(request.GET.get('lat'))
+        longitude = float(request.GET.get('lng'))
+        radius = int(request.GET.get('radius', 100))  # 100m par défaut
+        
+        # Utiliser la nouvelle méthode find_nearby
+        nearby_assets = Asset.find_nearby(latitude, longitude, radius)
+        
+        equipment_list = []
+        for asset in nearby_assets:
+            if asset.is_geolocated:
+                distance = asset.distance_to_point(latitude, longitude)
+                equipment_list.append({
+                    'id': asset.id,
+                    'name': asset.nom,
+                    'type': asset.categorie.nom if asset.categorie else 'Inconnu',
+                    'reference': asset.reference,
+                    'coordinates': asset.coordinates_dict,
+                    'distance': round(distance, 1) if distance else None,
+                    'status': asset.statut
+                })
+        
+        # Trier par distance
+        equipment_list.sort(key=lambda x: x['distance'] if x['distance'] else float('inf'))
+        
+        return JsonResponse({
+            'success': True,
+            'count': len(equipment_list),
+            'equipments': equipment_list
+        })
+        
+    except (ValueError, TypeError):
+        return JsonResponse({
+            'success': False,
+            'error': 'Paramètres lat/lng invalides'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def equipment_list_api(request):
+    """
+    API pour lister tous les équipements géolocalisés
+    """
+    try:
+        # Filtrer les assets géolocalisés
+        assets = Asset.objects.filter(
+            latitude__isnull=False,
+            longitude__isnull=False
+        ).select_related('categorie')
+        
+        equipment_list = []
+        for asset in assets:
+            equipment_list.append({
+                'id': asset.id,
+                'name': asset.nom,
+                'reference': asset.reference,
+                'type': asset.categorie.nom if asset.categorie else 'Inconnu',
+                'brand': asset.marque,
+                'model': asset.modele,
+                'status': asset.statut,
+                'criticality': asset.criticite,
+                'coordinates': asset.coordinates_dict,
+                'point_geojson': asset.point_geojson,
+                'fibers_total': asset.nb_fibres_total,
+                'fibers_used': asset.nb_fibres_utilisees,
+                'location': asset.localisation_texte,
+                'service_date': asset.date_mise_en_service.isoformat() if asset.date_mise_en_service else None,
+                'warranty_end': asset.fin_garantie.isoformat() if asset.fin_garantie else None
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'count': len(equipment_list),
+            'equipments': equipment_list
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erreur: {str(e)}'
         }, status=500)

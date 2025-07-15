@@ -5,6 +5,9 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django.utils import timezone
 import uuid
+import json
+from math import radians, cos, sin, asin, sqrt
+import json
 # ==============================================================================
 # AXE 0 : GESTION DES UTILISATEURS & COMPÉTENCES
 # ==============================================================================
@@ -84,7 +87,7 @@ class ZoneGeographique(models.Model):
     
     def __str__(self):
         return f"{self.nom} ({self.commune})"
-
+    
 class CategorieAsset(models.Model):
     nom = models.CharField(max_length=100, unique=True)
     
@@ -170,7 +173,154 @@ class Asset(models.Model):
     
     # Géométrie (pour les câbles)
     geometrie_geojson = models.JSONField(null=True, blank=True, help_text="Géométrie de l'asset (point, ligne, polygone)")
+    @property
+    def point_geojson(self):
+        """
+        Retourne la géolocalisation sous forme de Point GeoJSON
+        """
+        if self.latitude and self.longitude:
+            return {
+                "type": "Point",
+                "coordinates": [float(self.longitude), float(self.latitude)]
+            }
+        return None
     
+    @property
+    def coordinates_string(self):
+        """
+        Retourne les coordonnées sous forme de chaîne
+        Format: "latitude,longitude"
+        """
+        if self.latitude and self.longitude:
+            return f"{self.latitude},{self.longitude}"
+        return ""
+    
+    @property
+    def coordinates_dict(self):
+        """
+        Retourne les coordonnées sous forme de dictionnaire
+        """
+        if self.latitude and self.longitude:
+            return {
+                'lat': float(self.latitude),
+                'lng': float(self.longitude)
+            }
+        return None
+    
+    def set_coordinates_from_string(self, coords_string):
+        """
+        Définit les coordonnées à partir d'une chaîne "lat,lng"
+        """
+        try:
+            lat_str, lng_str = coords_string.split(',')
+            self.latitude = float(lat_str.strip())
+            self.longitude = float(lng_str.strip())
+        except (ValueError, TypeError):
+            raise ValueError("Format attendu: 'latitude,longitude'")
+    
+    def set_coordinates_from_point(self, point_geojson):
+        """
+        Définit les coordonnées à partir d'un Point GeoJSON
+        """
+        if point_geojson and point_geojson.get('type') == 'Point':
+            coords = point_geojson.get('coordinates', [])
+            if len(coords) >= 2:
+                self.longitude = coords[0]
+                self.latitude = coords[1]
+    
+    def distance_to(self, other_asset):
+        """
+        Calcule la distance vers un autre asset (en mètres)
+        Utilise la formule de Haversine
+        """
+        if not (self.latitude and self.longitude and 
+                other_asset.latitude and other_asset.longitude):
+            return None
+            
+        # Convertir en radians
+        lat1, lng1 = radians(float(self.latitude)), radians(float(self.longitude))
+        lat2, lng2 = radians(float(other_asset.latitude)), radians(float(other_asset.longitude))
+        
+        # Formule de Haversine
+        dlat = lat2 - lat1
+        dlng = lng2 - lng1
+        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlng/2)**2
+        c = 2 * asin(sqrt(a))
+        r = 6371000  # Rayon de la Terre en mètres
+        
+        return c * r
+    
+    def distance_to_point(self, latitude, longitude):
+        """
+        Calcule la distance vers un point donné (en mètres)
+        """
+        if not (self.latitude and self.longitude):
+            return None
+        
+        lat1, lng1 = radians(float(self.latitude)), radians(float(self.longitude))
+        lat2, lng2 = radians(float(latitude)), radians(float(longitude))
+        
+        dlat = lat2 - lat1
+        dlng = lng2 - lng1
+        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlng/2)**2
+        c = 2 * asin(sqrt(a))
+        r = 6371000
+        
+        return c * r
+    
+    @property
+    def is_geolocated(self):
+        """
+        Vérifie si l'asset est géolocalisé
+        """
+        return bool(self.latitude and self.longitude)
+    
+    def update_geometrie_from_coordinates(self):
+        """
+        Met à jour le champ geometrie_geojson à partir des coordonnées
+        """
+        if self.latitude and self.longitude:
+            self.geometrie_geojson = self.point_geojson
+    
+    def save(self, *args, **kwargs):
+        """
+        Override save pour mettre à jour automatiquement la géométrie
+        """
+        # Mettre à jour la géométrie si on a des coordonnées
+        if self.latitude and self.longitude and not self.geometrie_geojson:
+            self.update_geometrie_from_coordinates()
+        
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def find_nearby(cls, latitude, longitude, radius_meters=1000):
+        """
+        Trouve les assets dans un rayon donné
+        Utilise une approximation simple sans GDAL
+        """
+        # Calcul approximatif (1 degré ≈ 111 km)
+        delta_lat = radius_meters / 111000
+        delta_lng = radius_meters / (111000 * cos(radians(float(latitude))))
+        
+        return cls.objects.filter(
+            latitude__range=(latitude - delta_lat, latitude + delta_lat),
+            longitude__range=(longitude - delta_lng, longitude + delta_lng),
+            latitude__isnull=False,
+            longitude__isnull=False
+        )
+    
+    def __str__(self):
+        location_info = ""
+        if self.is_geolocated:
+            location_info = f" ({self.latitude:.6f}, {self.longitude:.6f})"
+        
+        return f"{self.nom} ({self.reference or 'N/A'}){location_info}"
+    def __str__(self):
+        location_info = ""
+        if self.is_geolocated:
+            location_info = f" ({self.latitude:.6f}, {self.longitude:.6f})"
+        
+        return f"{self.nom} ({self.reference or 'N/A'}){location_info}"
     @property
     def taux_occupation(self):
         """Calcule le taux d'occupation des fibres"""

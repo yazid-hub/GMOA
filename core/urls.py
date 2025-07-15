@@ -177,6 +177,13 @@ urlpatterns = [
     path('carte/', views.carte_ftth, name='carte_ftth'),
     path('api/assets/<int:asset_id>/details/', views.asset_details_ajax, name='asset_details_ajax'),
     path('api/assets/search/', views.api_assets_search, name='api_assets_search'),
+    path('api/ftth/equipment/create/', views.create_equipment_api, name='create_equipment_api'),
+    path('api/ftth/equipment/<int:asset_id>/update/', views.update_equipment_api, name='update_equipment_api'),
+    path('api/ftth/equipment/<int:asset_id>/delete/', views.delete_equipment_api, name='delete_equipment_api'),
+    path('api/ftth/cable/create/', views.create_cable_api, name='create_cable_api'),
+    # Dans urls.py
+    path('api/ftth/equipment/list/', views.equipment_list_api, name='equipment_list_api'),
+    path('api/ftth/equipment/nearby/', views.find_nearby_equipment_api, name='find_nearby_equipment_api'),
    
 
 ]
