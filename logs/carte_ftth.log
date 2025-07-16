@@ -220,3 +220,613 @@ INFO 2025-07-16 12:31:51,890 views 11744 32840 Nombre d'assets trouvés: 1000
 INFO 2025-07-16 12:31:51,957 views 11744 32840 Centre calculé: 46.495, 2.495 sur 1000 assets
 INFO 2025-07-16 12:31:51,963 views 11744 32840 Carte FTTH: 1000 assets valides, 0 ignorés
 INFO 2025-07-16 12:31:51,964 views 11744 32840 Centre de carte: 46.495, 2.495
+INFO 2025-07-16 12:32:24,306 views 11208 13696 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:32:24,307 views 11208 13696 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:32:24,314 views 11208 13696 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:32:24,317 views 11208 13696 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:32:24,317 views 11208 13696 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:34:43,808 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:34:43,810 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:34:43,813 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:34:43,817 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:34:43,817 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:35:00,846 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:35:00,847 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:35:00,851 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:35:00,854 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:35:00,854 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:35:12,993 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:35:12,994 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:35:12,997 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:35:13,001 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:35:13,001 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:35:14,419 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:35:14,420 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:35:14,423 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:35:14,427 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:35:14,428 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:35:15,117 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:35:15,118 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:35:15,121 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:35:15,124 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:35:15,124 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:35:23,392 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:35:23,394 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:35:23,397 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:35:23,401 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:35:23,401 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:35:24,446 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:35:24,447 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:35:24,450 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:35:24,453 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:35:24,453 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:35:29,160 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:35:29,161 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:35:29,168 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:35:29,173 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:35:29,173 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:35:38,994 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:35:38,995 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:35:38,998 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:35:39,001 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:35:39,002 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:35:40,055 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:35:40,057 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:35:40,061 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:35:40,066 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:35:40,066 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:35:47,020 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:35:47,021 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:35:47,024 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:35:47,027 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:35:47,027 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:36:22,778 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:36:22,780 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:36:22,783 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:36:22,786 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:36:22,787 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:37:02,730 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:37:02,732 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:37:02,735 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:37:02,739 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:37:02,739 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:37:29,748 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:37:29,749 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:37:29,752 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:37:29,755 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:37:29,755 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:39:14,361 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:39:14,362 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:39:14,365 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:39:14,369 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:39:14,369 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:39:15,404 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:39:15,412 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:39:15,433 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:39:15,442 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:39:15,442 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:39:17,501 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:39:17,502 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:39:17,506 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:39:17,509 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:39:17,510 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:39:30,324 views 11208 7100 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 12:39:30,325 views 11208 7100 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:39:30,328 views 11208 7100 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:39:30,332 views 11208 7100 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:39:30,332 views 11208 7100 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:41:20,576 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:41:20,577 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:41:20,581 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:41:20,585 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:41:20,585 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:41:21,804 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:41:21,805 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:41:21,812 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:41:21,816 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:41:21,816 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:41:22,474 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:41:22,476 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:41:22,480 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:41:22,484 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:41:22,484 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:41:33,200 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:41:33,201 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:41:33,204 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:41:33,208 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:41:33,208 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:41:33,919 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:41:33,920 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:41:33,924 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:41:33,927 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:41:33,928 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:41:39,021 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:41:39,022 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:41:39,027 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:41:39,030 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:41:39,031 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:42:02,100 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:42:02,101 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:42:02,103 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:42:02,108 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:42:02,108 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:42:03,036 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:42:03,037 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:42:03,041 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:42:03,044 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:42:03,044 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:42:03,823 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:42:03,824 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:42:03,829 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:42:03,834 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:42:03,834 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:42:56,487 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:42:56,489 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:42:56,492 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:42:56,497 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:42:56,497 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:42:59,709 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:42:59,711 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:42:59,715 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:42:59,719 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:42:59,719 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:43:40,683 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:43:40,684 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:43:40,687 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:43:40,692 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:43:40,692 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:44:08,616 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:44:08,617 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:44:08,619 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:44:08,623 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:44:08,623 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:44:10,434 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:44:10,435 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:44:10,438 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:44:10,442 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:44:10,442 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:44:17,806 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:44:17,807 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:44:17,811 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:44:17,817 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:44:17,817 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:44:41,763 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:44:41,764 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:44:41,767 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:44:41,771 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:44:41,771 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:45:14,498 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:45:14,499 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:45:14,503 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:45:14,508 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:45:14,508 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:45:16,173 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:45:16,174 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:45:16,177 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:45:16,180 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:45:16,181 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:45:17,162 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:45:17,163 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:45:17,166 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:45:17,169 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:45:17,169 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:46:19,915 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:46:19,917 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:46:19,920 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:46:19,924 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:46:19,925 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:46:20,989 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:46:20,990 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:46:20,994 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:46:20,998 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:46:20,998 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:46:21,499 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:46:21,500 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:46:21,503 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:46:21,506 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:46:21,507 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:46:25,407 views 11208 10280 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:46:25,409 views 11208 10280 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:46:25,412 views 11208 10280 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:46:25,416 views 11208 10280 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:46:25,416 views 11208 10280 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:51:20,064 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:51:20,065 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:51:20,067 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:51:20,070 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:51:20,071 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:53:16,521 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:53:16,522 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:53:16,525 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:53:16,529 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:53:16,529 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:53:24,447 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:53:24,448 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:53:24,452 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:53:24,456 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:53:24,457 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:55:10,470 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:55:10,472 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:55:10,476 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:55:10,479 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:55:10,479 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:55:12,405 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:55:12,406 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:55:12,410 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:55:12,414 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:55:12,414 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:55:40,898 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:55:40,899 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:55:40,903 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:55:40,907 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:55:40,907 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:56:01,370 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:56:01,371 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:56:01,375 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:56:01,378 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:56:01,378 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:56:02,466 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:56:02,467 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:56:02,469 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:56:02,473 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:56:02,473 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:56:07,356 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:56:07,357 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:56:07,361 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:56:07,365 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:56:07,365 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:58:21,613 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:58:21,614 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:58:21,617 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:58:21,621 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:58:21,621 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:58:23,188 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:58:23,189 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:58:23,193 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:58:23,196 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:58:23,196 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:58:47,504 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:58:47,505 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:58:47,509 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:58:47,512 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:58:47,512 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:58:56,829 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:58:56,830 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:58:56,833 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:58:56,836 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:58:56,836 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:58:57,944 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:58:57,946 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:58:57,948 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:58:57,952 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:58:57,952 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:58:58,547 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:58:58,549 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:58:58,552 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:58:58,555 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:58:58,555 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:59:11,285 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:59:11,286 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:59:11,290 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:59:11,293 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:59:11,294 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:59:12,312 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:59:12,314 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:59:12,317 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:59:12,320 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:59:12,321 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:59:13,145 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:59:13,146 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:59:13,149 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:59:13,152 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:59:13,153 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:59:49,683 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:59:49,684 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:59:49,687 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:59:49,691 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:59:49,692 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:59:59,896 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:59:59,897 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:59:59,900 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:59:59,904 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:59:59,904 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 13:00:28,744 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 13:00:28,745 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 13:00:28,749 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 13:00:28,753 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 13:00:28,753 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 13:00:30,215 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 13:00:30,216 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 13:00:30,220 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 13:00:30,222 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 13:00:30,223 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 13:00:46,711 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 13:00:46,712 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 13:00:46,715 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 13:00:46,718 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 13:00:46,718 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 13:00:47,810 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 13:00:47,811 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 13:00:47,815 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 13:00:47,820 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 13:00:47,820 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 13:00:51,829 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 13:00:51,830 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 13:00:51,835 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 13:00:51,839 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 13:00:51,839 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 13:01:24,192 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 13:01:24,193 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 13:01:24,196 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 13:01:24,200 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 13:01:24,200 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 13:01:30,859 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 13:01:30,860 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 13:01:30,864 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 13:01:30,868 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 13:01:30,868 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 13:01:33,228 views 11208 7088 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 13:01:33,229 views 11208 7088 Nombre d'assets trouvés: 12
+INFO 2025-07-16 13:01:33,234 views 11208 7088 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 13:01:33,238 views 11208 7088 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 13:01:33,238 views 11208 7088 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 14:44:36,887 views 11208 29784 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 14:44:36,889 views 11208 29784 Nombre d'assets trouvés: 12
+INFO 2025-07-16 14:44:36,891 views 11208 29784 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 14:44:36,897 views 11208 29784 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 14:44:36,897 views 11208 29784 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 14:52:14,459 views 11208 21848 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 14:52:14,460 views 11208 21848 Nombre d'assets trouvés: 12
+INFO 2025-07-16 14:52:14,464 views 11208 21848 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 14:52:14,469 views 11208 21848 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 14:52:14,469 views 11208 21848 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:14:53,052 views 28216 6436 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:14:53,054 views 28216 6436 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:14:53,057 views 28216 6436 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:14:53,061 views 28216 6436 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:14:53,061 views 28216 6436 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:14:54,495 views 28216 6436 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:14:54,497 views 28216 6436 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:14:54,500 views 28216 6436 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:14:54,504 views 28216 6436 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:14:54,504 views 28216 6436 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:15:20,937 views 28216 6436 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:15:20,938 views 28216 6436 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:15:20,941 views 28216 6436 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:15:20,945 views 28216 6436 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:15:20,945 views 28216 6436 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:15:46,336 views 28216 6436 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:15:46,337 views 28216 6436 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:15:46,340 views 28216 6436 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:15:46,344 views 28216 6436 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:15:46,344 views 28216 6436 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:22:00,715 views 28216 25700 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 15:22:00,716 views 28216 25700 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:22:00,720 views 28216 25700 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:22:00,723 views 28216 25700 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:22:00,724 views 28216 25700 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:22:02,131 views 28216 25700 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 15:22:02,132 views 28216 25700 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:22:02,136 views 28216 25700 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:22:02,140 views 28216 25700 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:22:02,140 views 28216 25700 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:25:26,238 views 28216 6436 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:25:26,240 views 28216 6436 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:25:26,244 views 28216 6436 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:25:26,248 views 28216 6436 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:25:26,249 views 28216 6436 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:25:32,108 views 28216 6436 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:25:32,109 views 28216 6436 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:25:32,113 views 28216 6436 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:25:32,118 views 28216 6436 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:25:32,118 views 28216 6436 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:25:48,842 views 28216 6436 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:25:48,843 views 28216 6436 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:25:48,847 views 28216 6436 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:25:48,849 views 28216 6436 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:25:48,850 views 28216 6436 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:26:36,965 views 28216 6436 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:26:36,966 views 28216 6436 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:26:36,971 views 28216 6436 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:26:36,976 views 28216 6436 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:26:36,976 views 28216 6436 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:27:23,556 views 28216 6436 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:27:23,558 views 28216 6436 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:27:23,560 views 28216 6436 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:27:23,565 views 28216 6436 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:27:23,565 views 28216 6436 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:29:19,243 views 28216 6436 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:29:19,244 views 28216 6436 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:29:19,248 views 28216 6436 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:29:19,252 views 28216 6436 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:29:19,253 views 28216 6436 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:30:10,628 views 28216 6436 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:30:10,630 views 28216 6436 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:30:10,637 views 28216 6436 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:30:10,644 views 28216 6436 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:30:10,645 views 28216 6436 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:30:52,726 views 28216 21560 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 15:30:52,728 views 28216 21560 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:30:52,730 views 28216 21560 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:30:52,734 views 28216 21560 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:30:52,734 views 28216 21560 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:31:07,186 views 28216 21560 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 15:31:07,187 views 28216 21560 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:31:07,190 views 28216 21560 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:31:07,194 views 28216 21560 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:31:07,194 views 28216 21560 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:31:08,295 views 28216 21560 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 15:31:08,296 views 28216 21560 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:31:08,301 views 28216 21560 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:31:08,306 views 28216 21560 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:31:08,306 views 28216 21560 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:34:25,390 views 26704 22044 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:34:25,392 views 26704 22044 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:34:25,396 views 26704 22044 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:34:25,399 views 26704 22044 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:34:25,399 views 26704 22044 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:34:44,972 views 26704 22044 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 15:34:44,973 views 26704 22044 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:34:44,977 views 26704 22044 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:34:44,980 views 26704 22044 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:34:44,980 views 26704 22044 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:40:05,586 views 26704 22900 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:40:05,587 views 26704 22900 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:40:05,590 views 26704 22900 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:40:05,594 views 26704 22900 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:40:05,594 views 26704 22900 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:41:19,860 views 26704 22900 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:41:19,861 views 26704 22900 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:41:19,864 views 26704 22900 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:41:19,869 views 26704 22900 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:41:19,869 views 26704 22900 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:41:25,060 views 26704 22900 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:41:25,061 views 26704 22900 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:41:25,064 views 26704 22900 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:41:25,067 views 26704 22900 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:41:25,068 views 26704 22900 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:42:05,660 views 26704 22900 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:42:05,661 views 26704 22900 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:42:05,663 views 26704 22900 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:42:05,667 views 26704 22900 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:42:05,667 views 26704 22900 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:43:22,777 views 26704 22900 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:43:22,779 views 26704 22900 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:43:22,782 views 26704 22900 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:43:22,786 views 26704 22900 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:43:22,786 views 26704 22900 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:43:39,476 views 26704 22900 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:43:39,477 views 26704 22900 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:43:39,481 views 26704 22900 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:43:39,485 views 26704 22900 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:43:39,485 views 26704 22900 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:43:55,081 views 26704 22900 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:43:55,083 views 26704 22900 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:43:55,085 views 26704 22900 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:43:55,088 views 26704 22900 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:43:55,088 views 26704 22900 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:46:16,544 views 26704 22888 Chargement de la carte FTTH pour l'utilisateur manager1
+INFO 2025-07-16 15:46:16,546 views 26704 22888 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:46:16,551 views 26704 22888 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:46:16,556 views 26704 22888 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:46:16,557 views 26704 22888 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:48:55,357 views 26704 20692 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:48:55,359 views 26704 20692 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:48:55,362 views 26704 20692 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:48:55,367 views 26704 20692 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:48:55,368 views 26704 20692 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:49:22,530 views 26704 20692 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:49:22,532 views 26704 20692 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:49:22,535 views 26704 20692 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:49:22,538 views 26704 20692 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:49:22,538 views 26704 20692 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:49:29,996 views 26704 20692 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:49:29,997 views 26704 20692 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:49:30,000 views 26704 20692 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:49:30,005 views 26704 20692 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:49:30,005 views 26704 20692 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:49:32,971 views 26704 20692 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:49:32,972 views 26704 20692 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:49:32,974 views 26704 20692 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:49:32,977 views 26704 20692 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:49:32,977 views 26704 20692 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:49:49,093 views 26704 23720 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:49:49,094 views 26704 23720 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:49:49,097 views 26704 23720 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:49:49,102 views 26704 23720 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:49:49,102 views 26704 23720 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 15:51:01,831 views 26704 19104 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 15:51:01,832 views 26704 19104 Nombre d'assets trouvés: 12
+INFO 2025-07-16 15:51:01,836 views 26704 19104 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 15:51:01,839 views 26704 19104 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 15:51:01,839 views 26704 19104 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:00:07,877 views 37612 13768 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:00:07,879 views 37612 13768 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:00:07,882 views 37612 13768 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:00:07,887 views 37612 13768 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:00:07,888 views 37612 13768 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:02:02,736 views 35976 31008 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:02:02,737 views 35976 31008 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:02:02,740 views 35976 31008 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:02:02,744 views 35976 31008 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:02:02,744 views 35976 31008 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:04:32,949 views 14592 32804 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:04:32,951 views 14592 32804 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:04:32,955 views 14592 32804 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:04:32,959 views 14592 32804 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:04:32,959 views 14592 32804 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:05:00,463 views 30416 22748 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:05:00,465 views 30416 22748 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:05:00,468 views 30416 22748 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:05:00,472 views 30416 22748 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:05:00,472 views 30416 22748 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:17:22,312 views 36072 33328 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:17:22,313 views 36072 33328 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:17:22,321 views 36072 33328 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:17:22,325 views 36072 33328 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:17:22,325 views 36072 33328 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:21:21,596 views 36072 33328 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:21:21,597 views 36072 33328 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:21:21,600 views 36072 33328 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:21:21,604 views 36072 33328 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:21:21,604 views 36072 33328 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:22:26,276 views 36072 33328 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:22:26,277 views 36072 33328 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:22:26,280 views 36072 33328 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:22:26,284 views 36072 33328 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:22:26,284 views 36072 33328 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:22:30,784 views 36072 33328 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:22:30,785 views 36072 33328 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:22:30,788 views 36072 33328 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:22:30,791 views 36072 33328 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:22:30,791 views 36072 33328 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:24:18,601 views 36072 33328 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:24:18,602 views 36072 33328 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:24:18,606 views 36072 33328 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:24:18,610 views 36072 33328 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:24:18,610 views 36072 33328 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:24:31,980 views 36072 33328 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:24:31,981 views 36072 33328 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:24:31,984 views 36072 33328 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:24:31,988 views 36072 33328 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:24:31,988 views 36072 33328 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:24:33,111 views 36072 33328 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:24:33,112 views 36072 33328 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:24:33,114 views 36072 33328 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:24:33,117 views 36072 33328 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:24:33,117 views 36072 33328 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:25:04,353 views 36072 33328 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:25:04,354 views 36072 33328 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:25:04,357 views 36072 33328 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:25:04,361 views 36072 33328 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:25:04,362 views 36072 33328 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:26:24,725 views 36072 33328 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:26:24,726 views 36072 33328 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:26:24,728 views 36072 33328 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:26:24,731 views 36072 33328 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:26:24,731 views 36072 33328 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:26:26,877 views 36072 33328 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:26:26,878 views 36072 33328 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:26:26,880 views 36072 33328 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:26:26,883 views 36072 33328 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:26:26,884 views 36072 33328 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:27:43,631 views 36072 33328 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:27:43,632 views 36072 33328 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:27:43,634 views 36072 33328 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:27:43,637 views 36072 33328 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:27:43,637 views 36072 33328 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:27:57,468 views 36072 33328 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:27:57,470 views 36072 33328 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:27:57,474 views 36072 33328 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:27:57,477 views 36072 33328 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:27:57,477 views 36072 33328 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:36:36,786 views 24496 27544 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:36:36,787 views 24496 27544 Nombre d'assets trouvés: 12
+INFO 2025-07-16 16:36:36,790 views 24496 27544 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 16:36:36,794 views 24496 27544 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 16:36:36,794 views 24496 27544 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 16:37:22,759 views 24496 4940 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:37:22,760 views 24496 4940 Nombre d'assets trouvés: 13
+INFO 2025-07-16 16:37:22,763 views 24496 4940 Centre calculé: 32.484686, 10.724971692307692 sur 13 assets
+INFO 2025-07-16 16:37:22,766 views 24496 4940 Carte FTTH: 13 assets valides, 0 ignorés
+INFO 2025-07-16 16:37:22,766 views 24496 4940 Centre de carte: 32.484686, 10.724971692307692

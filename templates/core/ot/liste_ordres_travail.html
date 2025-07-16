@@ -172,6 +172,12 @@
                                 <div class="text-sm text-gray-500">
                                     OT-{{ ordre.id }} • {{ ordre.get_type_OT_display }} • {{ ordre.intervention.nom }}
                                 </div>
+                                {% if ordre.description_detaillee %}
+                                <div class="text-xs text-gray-600 mt-1 truncate" title="{{ ordre.description_detaillee }}">
+                                    {{ ordre.description_detaillee|truncatewords:10 }}
+                                </div>
+                                {% endif %}
+
                                 {% if ordre.date_debut_reel and not ordre.date_fin_reelle %}
                                 <div class="text-xs text-green-600 mt-1">
                                     <i class="fas fa-play mr-1"></i>

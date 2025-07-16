@@ -443,6 +443,23 @@ main {
             </form>
         </div>
     </div>
+    <!-- Formulaire câble -->
+<div id="cable-form-sidebar" class="fixed top-0 right-0 w-96 h-full bg-white shadow-xl transform translate-x-full transition-transform duration-300 z-50 border-l-4 border-green-500">
+    <form id="cable-form" class="p-6 space-y-4">
+        <h2 class="text-xl font-bold text-green-600">Nouveau Câble FTTH</h2>
+        
+        <input type="text" id="cable-name" placeholder="Nom du câble" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+        <input type="number" id="cable-distance" placeholder="Distance (m)" class="w-full px-3 py-2 border border-gray-300 rounded-md" readonly>
+        <input type="number" id="cable-fiber-count" placeholder="Nombre de fibres" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+        <select id="cable-type" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+            <option value="LC">LC</option>
+            <option value="SC">SC</option>
+            <option value="FC">FC</option>
+        </select>
+        
+        <button type="submit" class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700">Créer le câble</button>
+    </form>
+</div>
 </div>
 
 <div id="notification-container" class="fixed top-20 right-4 z-[9999] space-y-2"></div>
@@ -488,7 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     initializeMap(); // Initialize map and set global variables
-    loadExistingEquipments();
+    loadExistingAssets();
     setupEventListeners();
     showNotification('Interface FTTH initialisée', 'success');
 });
@@ -555,39 +572,82 @@ function initializeMap() {
     console.log('🗺️ Carte FTTH initialisée avec succès');
 }
 
-function loadExistingEquipments() {
+function loadExistingAssets() {
+    console.log('🔄 Chargement des assets existants...');
+    
     fetch('/api/ftth/equipment/list/')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                // Clear existing equipments before loading to prevent duplication on refresh
-                equipments = [];
-                drawingLayer.eachLayer(layer => {
-                    if (layer.equipmentData) { // Check if it's an equipment marker
-                        drawingLayer.removeLayer(layer);
+            if (data.success && Array.isArray(data.equipments)) {
+                console.log(`✅ ${data.count} équipements chargés`);
+
+                // Charger les équipements (points)
+                data.equipments.forEach(equipment => {
+                    if (equipment.coordinates) {
+                        addEquipmentToMap(equipment);
                     }
                 });
 
-                data.equipments.forEach(equipment => {
-                    addEquipmentToMap(equipment);
-                });
-                updateStats();
-                console.log(`📡 ${data.equipments.length} équipements chargés`);
+                // Charger les câbles (lignes)
+                loadCables(data.equipments);
             } else {
-                showNotification(`Erreur: ${data.error}`, 'error');
+                console.error('❌ Erreur lors du chargement:', data.error || 'Aucun équipement reçu');
             }
         })
         .catch(error => {
-            console.error('Erreur chargement équipements:', error);
-            showNotification('Erreur lors du chargement des équipements', 'error');
+            console.error('❌ Erreur réseau:', error);
         });
 }
 
+function loadCables(equipments) {
+    equipments.forEach(equipment => {
+        if (
+            equipment.geometrie_geojson &&
+            equipment.geometrie_geojson.type === 'LineString'
+        ) {
+            addCableToMap(equipment);
+        }
+    });
+}
+
+function addCableToMap(cableData) {
+    if (
+        !cableData.geometrie_geojson ||
+        !cableData.geometrie_geojson.coordinates
+    ) return;
+    
+    const latlngs = cableData.geometrie_geojson.coordinates.map(coord => [coord[1], coord[0]]);
+    
+    const cableLine = L.polyline(latlngs, {
+        color: '#7c3aed',
+        weight: 3,
+        opacity: 0.8
+    }).addTo(map);
+    cableLine.bindPopup(`
+        <div>
+            <h4>📏 ${cableData.name}</h4>
+            <p><strong>Type:</strong> Câble FTTH</p>
+            <p><strong>Référence:</strong> ${cableData.reference}</p>
+            <p><strong>Fibres:</strong> ${cableData.fibers_total || 'N/A'}</p>
+            <p><strong>Statut:</strong> ${cableData.status}</p>
+        </div>
+    `);
+}
+
+
+function openCableForm(cableData) {
+    // Remplir les champs du formulaire
+    document.getElementById('cable-name').value = `Cable-${Date.now()}`;
+    document.getElementById('cable-distance').value = Math.round(cableData.distance);
+    document.getElementById('cable-fiber-count').value = '12';
+    document.getElementById('cable-type').value = 'LC';
+    
+    // Afficher le formulaire
+    document.getElementById('cable-form-sidebar').classList.remove('translate-x-full');
+    
+    // Stocker les données temporaires
+    window.pendingCableData = cableData;
+}
 function addEquipmentToMap(equipmentData) {
     if (!equipmentData.coordinates || !drawingLayer) {
         console.error('Données d\'équipement ou drawingLayer manquants pour ajouter à la carte.');
@@ -1150,19 +1210,42 @@ function createCableSegment(points, metadata) {
     updateStats();
 }
 
-function saveCableToDatabase(points, metadata, distance) {
-    const cableData = {
-        points: points.map(p => ({ lat: p[0], lng: p[1] })),
-        start_asset_id: metadata.startId || null,
-        end_asset_id: metadata.endId || null,
-        start_ref: metadata.startRef,
-        end_ref: metadata.endRef,
-        distance: Math.round(distance),
-        name: `Câble ${metadata.startRef} - ${metadata.endRef}`,
-        fiber_count: 12, // Default value, can be made dynamic
-        cable_type: 'LC' // Default value, can be made dynamic
-    };
+function calculateDistance(points) {
+    let totalDistance = 0;
+    for (let i = 1; i < points.length; i++) {
+        totalDistance += points[i-1].distanceTo(points[i]);
+    }
+    return totalDistance;
+}
 
+function saveCableToDatabase() {
+    if (cablePoints.length < 2) {
+        alert('Il faut au moins 2 points pour créer un câble');
+        return;
+    }
+    
+    const totalDistance = calculateDistance(cablePoints);
+    const cableName = `Cable-${Date.now()}`;
+    
+    // Déterminer les références de début et fin
+    const startRef = cableEquipments.length > 0 ? cableEquipments[0].equipmentData?.reference || 'Point-debut' : 'Point-debut';
+    const endRef = cableEquipments.length > 1 ? cableEquipments[cableEquipments.length-1].equipmentData?.reference || 'Point-fin' : 'Point-fin';
+    
+    const cableData = {
+        name: cableName,
+        points: cablePoints.map(p => ({lat: p.lat, lng: p.lng})),
+        startRef: startRef,
+        endRef: endRef,
+        startAssetId: cableEquipments.length > 0 ? cableEquipments[0].equipmentData?.id : null,
+        endAssetId: cableEquipments.length > 1 ? cableEquipments[cableEquipments.length-1].equipmentData?.id : null,
+        distance: totalDistance,
+        fiberCount: 12,
+        cableType: 'LC'
+    };
+    
+    console.log('💾 Sauvegarde câble en base avec données:', cableData);
+    
+    // Sauvegarder le câble
     fetch('/api/ftth/cable/create/', {
         method: 'POST',
         headers: {
@@ -1171,28 +1254,76 @@ function saveCableToDatabase(points, metadata, distance) {
         },
         body: JSON.stringify(cableData)
     })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw new Error(err.error || 'Server error'); });
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.success) {
-            console.log(`💾 Câble sauvegardé: ID ${data.cable_id}`);
-            // Optionally, update the local cable object with the backend ID
-            // This might require a more sophisticated way to match local cables to backend ones
+            console.log('✅ Câble créé:', data);
+            alert(`Câble créé avec succès! ID: ${data.cable_asset_id}`);
         } else {
-            console.error('Erreur sauvegarde câble:', data.error);
-            showNotification(`Erreur lors de la sauvegarde du câble: ${data.error}`, 'error');
+            console.error('❌ Erreur:', data.error);
+            alert('Erreur lors de la sauvegarde du câble: ' + data.error);
         }
     })
-    .catch(error => {
-        console.error('Erreur sauvegarde câble:', error);
-        showNotification(`Erreur lors de la sauvegarde du câble: ${error.message}`, 'error');
+    .finally(() => {
+        // Nettoyer
+        cablePoints = [];
+        cableEquipments = [];
+        currentCableLine = null;
+        deactivateToolMode();
     });
 }
-
+function finalizeCable() {
+    if (cablePoints.length < 2) {
+        alert('Il faut au moins 2 points pour créer un câble');
+        return;
+    }
+    
+    const totalDistance = calculateDistance(cablePoints);
+    const cableName = `Cable-${Date.now()}`;
+    
+    // Déterminer les références de début et fin
+    const startRef = cableEquipments.length > 0 ? cableEquipments[0].equipmentData?.reference || 'Point-debut' : 'Point-debut';
+    const endRef = cableEquipments.length > 1 ? cableEquipments[cableEquipments.length-1].equipmentData?.reference || 'Point-fin' : 'Point-fin';
+    
+    const cableData = {
+        name: cableName,
+        points: cablePoints.map(p => ({lat: p.lat, lng: p.lng})),
+        startRef: startRef,
+        endRef: endRef,
+        startAssetId: cableEquipments.length > 0 ? cableEquipments[0].equipmentData?.id : null,
+        endAssetId: cableEquipments.length > 1 ? cableEquipments[cableEquipments.length-1].equipmentData?.id : null,
+        distance: totalDistance,
+        fiberCount: 12,
+        cableType: 'LC'
+    };
+    
+    // Sauvegarder le câble
+    fetch('/api/ftth/cable/create/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(cableData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('✅ Câble créé:', data);
+            alert(`Câble créé avec succès! ID: ${data.cable_asset_id}`);
+        } else {
+            console.error('❌ Erreur:', data.error);
+            alert('Erreur lors de la sauvegarde du câble: ' + data.error);
+        }
+    })
+    .finally(() => {
+        // Nettoyer
+        cablePoints = [];
+        cableEquipments = [];
+        currentCableLine = null;
+        deactivateToolMode();
+    });
+}
 function addMeasurePoint(lat, lng) {
     const point = L.latLng(lat, lng);
     measurePoints.push(point);
@@ -1295,13 +1426,13 @@ function clearDrawings() {
                 (layer instanceof L.CircleMarker && layer.options.fillColor === '#7c3aed')) { // Temporary cable points
                 drawingLayer.removeLayer(layer);
             }
-            // Do NOT remove equipment markers here as they are handled by loadExistingEquipments
+            // Do NOT remove equipment markers here as they are handled 
         });
 
         resetDrawingState();
         cables = []; // Clear the cables array
         // Re-load equipments to ensure only valid equipments are on the map
-        loadExistingEquipments();
+        loadExistingAssets();
         updateStats();
         showNotification('Tous les dessins ont été effacés', 'success');
     }
@@ -1417,7 +1548,7 @@ function refreshMap() {
     equipments.length = 0; // Reset local equipments array
     cables.length = 0; // Reset local cables array
 
-    loadExistingEquipments(); // This will repopulate `equipments` and `drawingLayer`
+    loadExistingAssets(); // This will repopulate `equipments` and `drawingLayer`
     showNotification('Carte actualisée', 'success');
 }
 

@@ -199,9 +199,9 @@ class OrdreDeTravailForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
                 'placeholder': 'Ex: Maintenance préventive pompe A1'
             }),
-            'description_detaillee': forms.TextInput(attrs={
+            'description_detaillee': forms.Textarea(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Ex: Maintenance préventive pompe A1'
+                'placeholder': 'Ex: la pompe ne fonctinne pas à cause de ...'
             }),
             'type_OT': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'

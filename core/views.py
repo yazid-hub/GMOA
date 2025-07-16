@@ -6,7 +6,6 @@
 
 import json
 import os
-from decimal import Decimal
 from datetime import datetime, timedelta
 from io import BytesIO
 from django.utils.html import escape
@@ -27,6 +26,16 @@ from django.template.loader import get_template
 from django.urls import reverse
 from django.utils import timezone
 from django.conf import settings
+import logging
+from decimal import Decimal, InvalidOperation
+from .models import Asset, CategorieAsset, OrdreDeTravail
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.contrib.gis.geos import GEOSGeometry
+
+
+# Configuration du logging
+logger = logging.getLogger(__name__)
 # core/views_suppression.py
 # Vues pour la suppression des opérations et points de contrôle
 # À ajouter dans core/views.py
@@ -3671,13 +3680,6 @@ def delete_equipment_api(request, asset_id):
     
 
 
-# À ajouter dans core/views.py
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-import json
-from decimal import Decimal
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -3707,7 +3709,13 @@ def create_equipment_api(request):
         
         category_name = type_to_category.get(data['type'], 'Équipement FTTH')
         category, created = CategorieAsset.objects.get_or_create(nom=category_name)
-        
+
+        # Création manuelle d'un GeoJSON Point
+        point_geojson = {
+            "type": "Point",
+            "coordinates": [float(data['longitude']), float(data['latitude'])]
+        }
+
         # Créer l'asset
         asset = Asset.objects.create(
             nom=data['name'],
@@ -3716,9 +3724,11 @@ def create_equipment_api(request):
             marque=data.get('brand', ''),
             modele=data.get('model', ''),
             statut=data['status'],
-            criticite=data.get('criticality', 'MOYENNE'),
+            criticite=data.get('criticality', '2'),
             latitude=Decimal(str(data['latitude'])),
             longitude=Decimal(str(data['longitude'])),
+            geometrie_geojson=point_geojson,  # ✅ Ajout ici
+
             localisation_texte=data.get('location', ''),
             date_mise_en_service=data.get('service_date') or None,
             fin_garantie=data.get('warranty_end') or None,
@@ -3844,7 +3854,7 @@ def create_cable_api(request):
                 reference=f"CBL-{plan.id}",
                 categorie=cable_category,
                 statut='EN_SERVICE',
-                criticite='MOYENNE',
+                criticite='2',
                 geometrie_geojson=geometry_geojson,
                 nb_fibres_total=data.get('fiberCount', 12),
                 type_connecteur=data.get('cableType', 'LC')
@@ -3969,9 +3979,8 @@ def equipment_list_api(request):
     try:
         # Filtrer les assets géolocalisés
         assets = Asset.objects.filter(
-            latitude__isnull=False,
-            longitude__isnull=False
-        ).select_related('categorie')
+            geometrie_geojson__isnull=False
+        ).exclude(geometrie_geojson='').select_related('categorie')
         
         equipment_list = []
         for asset in assets:
@@ -3985,7 +3994,7 @@ def equipment_list_api(request):
                 'status': asset.statut,
                 'criticality': asset.criticite,
                 'coordinates': asset.coordinates_dict,
-                'point_geojson': asset.point_geojson,
+                'geometrie_geojson': asset.geometrie_geojson,
                 'fibers_total': asset.nb_fibres_total,
                 'fibers_used': asset.nb_fibres_utilisees,
                 'location': asset.localisation_texte,
@@ -4005,21 +4014,7 @@ def equipment_list_api(request):
             'error': f'Erreur: {str(e)}'
         }, status=500)
     
-import json
-import logging
-from decimal import Decimal, InvalidOperation
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from django.db.models import Avg, Count, Q
-from django.core.paginator import Paginator
-from django.db import models
-from django.conf import settings
 
-from .models import Asset, CategorieAsset, OrdreDeTravail
-
-# Configuration du logging
-logger = logging.getLogger(__name__)
 
 # Configuration des coordonnées par défaut selon la région
 DEFAULT_COORDINATES = {

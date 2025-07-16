@@ -48,7 +48,21 @@
                         <p class="mt-1 text-sm text-red-600">{{ form.titre.errors.0 }}</p>
                         {% endif %}
                     </div>
-                    
+                    <div>
+                                            <!-- description d'OT -->
+
+                    <label for="{{ form.description_detaillee.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.description_detaillee.label }}
+                        {% if form.description_detaillee.field.required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
+                    {{ form.description_detaillee }}
+                    {% if form.description_detaillee.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.description_detaillee.help_text }}</p>
+                    {% endif %}
+                    {% if form.description_detaillee.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.description_detaillee.errors.0 }}</p>
+                    {% endif %}
+                </div>
                     <!-- Type d'OT -->
                     <div>
                         <label for="{{ form.type_OT.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
