@@ -96,7 +96,23 @@ def replace(value, arg):
             return value
     return value
 
-
+@register.filter
+def duration_display(start_time, end_time=None):
+    """Affiche la durée de manière lisible"""
+    if not start_time:
+        return "Non démarré"
+    
+    if end_time:
+        duration = end_time - start_time
+        hours = duration.total_seconds() // 3600
+        minutes = (duration.total_seconds() % 3600) // 60
+        return f"{int(hours)}h {int(minutes)}m"
+    else:
+        from django.utils import timezone
+        duration = timezone.now() - start_time
+        hours = duration.total_seconds() // 3600
+        return f"{int(hours)}h (en cours)"
+    
 @register.filter
 def options_list(point):
     """

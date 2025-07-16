@@ -84,6 +84,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.user_role_context',
             ],
         },
     },
@@ -200,3 +201,144 @@ MEDIA_COMPRESSION = {
     'ENABLE_VIDEO_COMPRESSION': True,
     'VIDEO_QUALITY': 'medium',
 }
+
+# Configuration de la carte FTTH
+# ===============================
+
+# Région par défaut pour le centrage de la carte
+# Options: 'france', 'paris', 'lyon', 'marseille'
+GMAO_DEFAULT_REGION = 'france'
+
+# Validation stricte des coordonnées (France métropolitaine + DOM-TOM)
+# Si True, rejette les coordonnées hors de France
+# Si False, accepte toutes les coordonnées GPS valides
+GMAO_STRICT_COORDINATES = False
+# Configuration du logging pour la carte
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'logs/carte_ftth.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'core.views': {  # Remplacez 'core' par le nom de votre app
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
+
+# Configuration des assets
+# =========================
+
+# Nombre maximum d'assets à afficher sur la carte
+GMAO_MAX_ASSETS_ON_MAP = 1000
+
+# Rayon de recherche pour les assets proches (en mètres)
+GMAO_NEARBY_ASSETS_RADIUS = 100
+
+# Configuration de la recherche
+# ==============================
+
+# Nombre maximum de résultats de recherche
+GMAO_MAX_SEARCH_RESULTS = 20
+
+# Délai de recherche (en millisecondes)
+GMAO_SEARCH_DELAY = 300
+
+# Configuration des performances
+# ===============================
+
+# Utiliser la mise en cache pour les données de la carte
+GMAO_USE_CACHE = True
+
+# Durée de mise en cache (en secondes)
+GMAO_CACHE_DURATION = 300  # 5 minutes
+
+# Configuration de sécurité
+# ==========================
+
+# Limiter l'accès à la carte selon les rôles
+GMAO_CARTE_ROLES_ALLOWED = ['ADMIN', 'MANAGER', 'TECHNICIEN']
+
+# Configuration des coordonnées personnalisées
+# =============================================
+
+# Vous pouvez ajouter vos propres coordonnées par défaut
+GMAO_CUSTOM_COORDINATES = {
+    'siege_social': {'lat': 48.8566, 'lng': 2.3522},
+    'depot_nord': {'lat': 50.6292, 'lng': 3.0573},
+    'depot_sud': {'lat': 43.2965, 'lng': 5.3698},
+    # Ajoutez vos propres coordonnées ici
+}
+
+# Configuration des couleurs pour les statuts
+# ============================================
+
+GMAO_STATUS_COLORS = {
+    'en_service': '#10b981',      # Vert
+    'en_panne': '#ef4444',        # Rouge
+    'en_maintenance': '#f59e0b',  # Orange
+    'hors_service': '#6b7280',    # Gris
+    'planifie': '#3b82f6',        # Bleu
+}
+
+# Configuration des icônes par catégorie
+# =======================================
+
+GMAO_CATEGORY_ICONS = {
+    'nro': 'fas fa-server',
+    'pm': 'fas fa-network-wired',
+    'pb': 'fas fa-cube',
+    'pto': 'fas fa-home',
+    'cable': 'fas fa-minus',
+    'default': 'fas fa-circle',
+}
+
+# Configuration des alertes
+# =========================
+
+# Activer les alertes pour les coordonnées invalides
+GMAO_ALERT_INVALID_COORDINATES = True
+
+# Email pour les alertes de configuration
+GMAO_ALERT_EMAIL = 'admin@votre-entreprise.com'
+
+# Configuration de développement
+# ==============================
+
+# Activer le mode debug pour la carte (plus de logs)
+GMAO_DEBUG_MODE = DEBUG
+
+# Afficher les assets avec coordonnées invalides dans l'interface
+GMAO_SHOW_INVALID_ASSETS = DEBUG
+
+# Configuration des permissions
+# =============================
+
+# Permissions requises pour accéder à la carte
+GMAO_CARTE_PERMISSIONS = [
+    'core.view_asset',
+    'core.view_carte',
+]

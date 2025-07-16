@@ -1,0 +1,222 @@
+INFO 2025-07-16 12:07:50,679 views 39232 34540 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:07:50,680 views 39232 34540 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:07:50,683 views 39232 34540 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:07:50,687 views 39232 34540 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:07:50,687 views 39232 34540 Centre de carte: 32.47941225, 10.714922166666668
+INFO 2025-07-16 12:08:43,212 views 39232 34540 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:08:43,214 views 39232 34540 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:08:43,221 views 39232 34540 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:08:43,224 views 39232 34540 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:08:43,224 views 39232 34540 Centre de carte: 32.47941225, 10.714922166666668
+ERROR 2025-07-16 12:12:54,293 views 24080 24780 Erreur lors de la récupération des détails pour asset 99999: No Asset matches the given query.
+Traceback (most recent call last):
+  File "C:\Users\yazid\Projets\GMOA\venv\Lib\site-packages\django\shortcuts.py", line 90, in get_object_or_404
+    return queryset.get(*args, **kwargs)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yazid\Projets\GMOA\venv\Lib\site-packages\django\db\models\query.py", line 633, in get
+    raise self.model.DoesNotExist(
+        "%s matching query does not exist." % self.model._meta.object_name
+    )
+core.models.Asset.DoesNotExist: Asset matching query does not exist.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\yazid\Projets\GMOA\core\views.py", line 4335, in asset_details_ajax
+    asset = get_object_or_404(Asset, pk=asset_id)
+  File "C:\Users\yazid\Projets\GMOA\venv\Lib\site-packages\django\shortcuts.py", line 92, in get_object_or_404
+    raise Http404(
+        "No %s matches the given query." % queryset.model._meta.object_name
+    )
+django.http.response.Http404: No Asset matches the given query.
+INFO 2025-07-16 12:12:55,209 views 24080 24780 Récupération des détails pour asset 1
+INFO 2025-07-16 12:12:55,213 views 24080 24780 Détails asset 1 récupérés avec succès
+WARNING 2025-07-16 12:12:56,094 views 24080 24780 Aucun asset avec coordonnées valides trouvé
+WARNING 2025-07-16 12:12:56,096 views 24080 24780 Aucun asset avec coordonnées valides trouvé
+INFO 2025-07-16 12:12:56,099 views 24080 24780 Centre calculé: 47.3103, 3.59395 sur 2 assets
+INFO 2025-07-16 12:12:56,955 views 24080 24780 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:12:56,956 views 24080 24780 Nombre d'assets trouvés: 1
+INFO 2025-07-16 12:12:56,959 views 24080 24780 Centre calculé: 48.8566, 2.3522 sur 1 assets
+INFO 2025-07-16 12:12:56,961 views 24080 24780 Carte FTTH: 1 assets valides, 0 ignorés
+INFO 2025-07-16 12:12:56,961 views 24080 24780 Centre de carte: 48.8566, 2.3522
+INFO 2025-07-16 12:12:58,728 views 24080 24780 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:12:58,729 views 24080 24780 Nombre d'assets trouvés: 1
+INFO 2025-07-16 12:12:58,730 views 24080 24780 Centre calculé: 48.8566, 2.3522 sur 1 assets
+INFO 2025-07-16 12:12:58,733 views 24080 24780 Carte FTTH: 1 assets valides, 0 ignorés
+INFO 2025-07-16 12:12:58,733 views 24080 24780 Centre de carte: 48.8566, 2.3522
+INFO 2025-07-16 12:12:59,605 views 24080 24780 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:12:59,607 views 24080 24780 Nombre d'assets trouvés: 3
+INFO 2025-07-16 12:12:59,608 views 24080 24780 Centre calculé: 45.972366666666666, 4.1859 sur 3 assets
+INFO 2025-07-16 12:12:59,610 views 24080 24780 Carte FTTH: 3 assets valides, 0 ignorés
+INFO 2025-07-16 12:12:59,610 views 24080 24780 Centre de carte: 45.972366666666666, 4.1859
+ERROR 2025-07-16 12:13:00,506 views 24080 24780 Erreur lors de la récupération des détails pour asset 99999: No Asset matches the given query.
+Traceback (most recent call last):
+  File "C:\Users\yazid\Projets\GMOA\venv\Lib\site-packages\django\shortcuts.py", line 90, in get_object_or_404
+    return queryset.get(*args, **kwargs)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yazid\Projets\GMOA\venv\Lib\site-packages\django\db\models\query.py", line 633, in get
+    raise self.model.DoesNotExist(
+        "%s matching query does not exist." % self.model._meta.object_name
+    )
+core.models.Asset.DoesNotExist: Asset matching query does not exist.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\yazid\Projets\GMOA\core\views.py", line 4335, in asset_details_ajax
+    asset = get_object_or_404(Asset, pk=asset_id)
+  File "C:\Users\yazid\Projets\GMOA\venv\Lib\site-packages\django\shortcuts.py", line 92, in get_object_or_404
+    raise Http404(
+        "No %s matches the given query." % queryset.model._meta.object_name
+    )
+django.http.response.Http404: No Asset matches the given query.
+INFO 2025-07-16 12:13:01,486 views 24080 24780 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:13:01,487 views 24080 24780 Nombre d'assets trouvés: 1000
+INFO 2025-07-16 12:13:01,555 views 24080 24780 Centre calculé: 46.495, 2.495 sur 1000 assets
+INFO 2025-07-16 12:13:01,562 views 24080 24780 Carte FTTH: 1000 assets valides, 0 ignorés
+INFO 2025-07-16 12:13:01,562 views 24080 24780 Centre de carte: 46.495, 2.495
+INFO 2025-07-16 12:13:04,870 views 24080 24780 Récupération des détails pour asset 2
+INFO 2025-07-16 12:13:04,873 views 24080 24780 Détails asset 2 récupérés avec succès
+ERROR 2025-07-16 12:22:52,853 views 29056 29356 Erreur lors de la récupération des détails pour asset 99999: No Asset matches the given query.
+Traceback (most recent call last):
+  File "C:\Users\yazid\Projets\GMOA\venv\Lib\site-packages\django\shortcuts.py", line 90, in get_object_or_404
+    return queryset.get(*args, **kwargs)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yazid\Projets\GMOA\venv\Lib\site-packages\django\db\models\query.py", line 633, in get
+    raise self.model.DoesNotExist(
+        "%s matching query does not exist." % self.model._meta.object_name
+    )
+core.models.Asset.DoesNotExist: Asset matching query does not exist.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\yazid\Projets\GMOA\core\views.py", line 4351, in asset_details_ajax
+    asset = get_object_or_404(Asset, pk=asset_id)
+  File "C:\Users\yazid\Projets\GMOA\venv\Lib\site-packages\django\shortcuts.py", line 92, in get_object_or_404
+    raise Http404(
+        "No %s matches the given query." % queryset.model._meta.object_name
+    )
+django.http.response.Http404: No Asset matches the given query.
+INFO 2025-07-16 12:22:53,744 views 29056 29356 Récupération des détails pour asset 1
+INFO 2025-07-16 12:22:53,748 views 29056 29356 Détails asset 1 récupérés avec succès
+WARNING 2025-07-16 12:22:54,632 views 29056 29356 Aucun asset avec coordonnées valides trouvé
+WARNING 2025-07-16 12:22:54,635 views 29056 29356 Aucun asset avec coordonnées valides trouvé
+INFO 2025-07-16 12:22:54,638 views 29056 29356 Centre calculé: 47.3103, 3.59395 sur 2 assets
+INFO 2025-07-16 12:22:55,518 views 29056 29356 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:22:55,519 views 29056 29356 Nombre d'assets trouvés: 1
+INFO 2025-07-16 12:22:55,521 views 29056 29356 Centre calculé: 48.8566, 2.3522 sur 1 assets
+INFO 2025-07-16 12:22:55,523 views 29056 29356 Carte FTTH: 1 assets valides, 0 ignorés
+INFO 2025-07-16 12:22:55,523 views 29056 29356 Centre de carte: 48.8566, 2.3522
+INFO 2025-07-16 12:22:57,276 views 29056 29356 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:22:57,277 views 29056 29356 Nombre d'assets trouvés: 1
+INFO 2025-07-16 12:22:57,279 views 29056 29356 Centre calculé: 48.8566, 2.3522 sur 1 assets
+INFO 2025-07-16 12:22:57,281 views 29056 29356 Carte FTTH: 1 assets valides, 0 ignorés
+INFO 2025-07-16 12:22:57,281 views 29056 29356 Centre de carte: 48.8566, 2.3522
+INFO 2025-07-16 12:22:58,156 views 29056 29356 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:22:58,157 views 29056 29356 Nombre d'assets trouvés: 3
+INFO 2025-07-16 12:22:58,159 views 29056 29356 Centre calculé: 45.972366666666666, 4.1859 sur 3 assets
+INFO 2025-07-16 12:22:58,161 views 29056 29356 Carte FTTH: 3 assets valides, 0 ignorés
+INFO 2025-07-16 12:22:58,161 views 29056 29356 Centre de carte: 45.972366666666666, 4.1859
+ERROR 2025-07-16 12:22:59,038 views 29056 29356 Erreur lors de la récupération des détails pour asset 99999: No Asset matches the given query.
+Traceback (most recent call last):
+  File "C:\Users\yazid\Projets\GMOA\venv\Lib\site-packages\django\shortcuts.py", line 90, in get_object_or_404
+    return queryset.get(*args, **kwargs)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yazid\Projets\GMOA\venv\Lib\site-packages\django\db\models\query.py", line 633, in get
+    raise self.model.DoesNotExist(
+        "%s matching query does not exist." % self.model._meta.object_name
+    )
+core.models.Asset.DoesNotExist: Asset matching query does not exist.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\yazid\Projets\GMOA\core\views.py", line 4351, in asset_details_ajax
+    asset = get_object_or_404(Asset, pk=asset_id)
+  File "C:\Users\yazid\Projets\GMOA\venv\Lib\site-packages\django\shortcuts.py", line 92, in get_object_or_404
+    raise Http404(
+        "No %s matches the given query." % queryset.model._meta.object_name
+    )
+django.http.response.Http404: No Asset matches the given query.
+INFO 2025-07-16 12:22:59,989 views 29056 29356 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:22:59,990 views 29056 29356 Nombre d'assets trouvés: 1000
+INFO 2025-07-16 12:23:00,068 views 29056 29356 Centre calculé: 46.495, 2.495 sur 1000 assets
+INFO 2025-07-16 12:23:00,074 views 29056 29356 Carte FTTH: 1000 assets valides, 0 ignorés
+INFO 2025-07-16 12:23:00,074 views 29056 29356 Centre de carte: 46.495, 2.495
+INFO 2025-07-16 12:23:03,302 views 29056 29356 Récupération des détails pour asset 2
+INFO 2025-07-16 12:23:03,307 views 29056 29356 Détails asset 2 récupérés avec succès
+WARNING 2025-07-16 12:29:14,678 views 10556 3760 Aucun asset avec coordonnées valides trouvé
+WARNING 2025-07-16 12:29:14,681 views 10556 3760 Aucun asset avec coordonnées valides trouvé
+INFO 2025-07-16 12:29:14,683 views 10556 3760 Centre calculé: 47.3103, 3.59395 sur 2 assets
+INFO 2025-07-16 12:29:15,504 views 10556 3760 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:29:15,505 views 10556 3760 Nombre d'assets trouvés: 1
+INFO 2025-07-16 12:29:15,507 views 10556 3760 Centre calculé: 48.8566, 2.3522 sur 1 assets
+INFO 2025-07-16 12:29:15,509 views 10556 3760 Carte FTTH: 1 assets valides, 0 ignorés
+INFO 2025-07-16 12:29:15,509 views 10556 3760 Centre de carte: 48.8566, 2.3522
+INFO 2025-07-16 12:29:17,158 views 10556 3760 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:29:17,159 views 10556 3760 Nombre d'assets trouvés: 1
+INFO 2025-07-16 12:29:17,161 views 10556 3760 Centre calculé: 48.8566, 2.3522 sur 1 assets
+INFO 2025-07-16 12:29:17,163 views 10556 3760 Carte FTTH: 1 assets valides, 0 ignorés
+INFO 2025-07-16 12:29:17,164 views 10556 3760 Centre de carte: 48.8566, 2.3522
+INFO 2025-07-16 12:29:17,994 views 10556 3760 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:29:17,995 views 10556 3760 Nombre d'assets trouvés: 3
+INFO 2025-07-16 12:29:17,997 views 10556 3760 Centre calculé: 45.972366666666666, 4.1859 sur 3 assets
+INFO 2025-07-16 12:29:18,000 views 10556 3760 Carte FTTH: 3 assets valides, 0 ignorés
+INFO 2025-07-16 12:29:18,000 views 10556 3760 Centre de carte: 45.972366666666666, 4.1859
+INFO 2025-07-16 12:29:19,749 views 10556 3760 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:29:19,750 views 10556 3760 Nombre d'assets trouvés: 1000
+INFO 2025-07-16 12:29:19,816 views 10556 3760 Centre calculé: 46.495, 2.495 sur 1000 assets
+INFO 2025-07-16 12:29:19,822 views 10556 3760 Carte FTTH: 1000 assets valides, 0 ignorés
+INFO 2025-07-16 12:29:19,823 views 10556 3760 Centre de carte: 46.495, 2.495
+WARNING 2025-07-16 12:29:43,312 views 32996 8460 Aucun asset avec coordonnées valides trouvé
+WARNING 2025-07-16 12:29:43,315 views 32996 8460 Aucun asset avec coordonnées valides trouvé
+INFO 2025-07-16 12:29:43,317 views 32996 8460 Centre calculé: 47.3103, 3.59395 sur 2 assets
+INFO 2025-07-16 12:29:44,162 views 32996 8460 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:29:44,164 views 32996 8460 Nombre d'assets trouvés: 1
+INFO 2025-07-16 12:29:44,165 views 32996 8460 Centre calculé: 48.8566, 2.3522 sur 1 assets
+INFO 2025-07-16 12:29:44,167 views 32996 8460 Carte FTTH: 1 assets valides, 0 ignorés
+INFO 2025-07-16 12:29:44,167 views 32996 8460 Centre de carte: 48.8566, 2.3522
+INFO 2025-07-16 12:29:46,013 views 32996 8460 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:29:46,015 views 32996 8460 Nombre d'assets trouvés: 1
+INFO 2025-07-16 12:29:46,016 views 32996 8460 Centre calculé: 48.8566, 2.3522 sur 1 assets
+INFO 2025-07-16 12:29:46,018 views 32996 8460 Carte FTTH: 1 assets valides, 0 ignorés
+INFO 2025-07-16 12:29:46,018 views 32996 8460 Centre de carte: 48.8566, 2.3522
+INFO 2025-07-16 12:29:46,938 views 32996 8460 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:29:46,939 views 32996 8460 Nombre d'assets trouvés: 3
+INFO 2025-07-16 12:29:46,941 views 32996 8460 Centre calculé: 45.972366666666666, 4.1859 sur 3 assets
+INFO 2025-07-16 12:29:46,943 views 32996 8460 Carte FTTH: 3 assets valides, 0 ignorés
+INFO 2025-07-16 12:29:46,943 views 32996 8460 Centre de carte: 45.972366666666666, 4.1859
+INFO 2025-07-16 12:29:48,889 views 32996 8460 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:29:48,891 views 32996 8460 Nombre d'assets trouvés: 1000
+INFO 2025-07-16 12:29:48,958 views 32996 8460 Centre calculé: 46.495, 2.495 sur 1000 assets
+INFO 2025-07-16 12:29:48,965 views 32996 8460 Carte FTTH: 1000 assets valides, 0 ignorés
+INFO 2025-07-16 12:29:48,965 views 32996 8460 Centre de carte: 46.495, 2.495
+INFO 2025-07-16 12:30:38,700 views 23716 23676 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-16 12:30:38,701 views 23716 23676 Nombre d'assets trouvés: 12
+INFO 2025-07-16 12:30:38,705 views 23716 23676 Centre calculé: 32.47941225, 10.714922166666668 sur 12 assets
+INFO 2025-07-16 12:30:38,709 views 23716 23676 Carte FTTH: 12 assets valides, 0 ignorés
+INFO 2025-07-16 12:30:38,709 views 23716 23676 Centre de carte: 32.47941225, 10.714922166666668
+WARNING 2025-07-16 12:31:46,809 views 11744 32840 Aucun asset avec coordonnées valides trouvé
+WARNING 2025-07-16 12:31:46,811 views 11744 32840 Aucun asset avec coordonnées valides trouvé
+INFO 2025-07-16 12:31:46,813 views 11744 32840 Centre calculé: 47.3103, 3.59395 sur 2 assets
+INFO 2025-07-16 12:31:47,642 views 11744 32840 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:31:47,644 views 11744 32840 Nombre d'assets trouvés: 1
+INFO 2025-07-16 12:31:47,646 views 11744 32840 Centre calculé: 48.8566, 2.3522 sur 1 assets
+INFO 2025-07-16 12:31:47,648 views 11744 32840 Carte FTTH: 1 assets valides, 0 ignorés
+INFO 2025-07-16 12:31:47,648 views 11744 32840 Centre de carte: 48.8566, 2.3522
+INFO 2025-07-16 12:31:49,308 views 11744 32840 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:31:49,310 views 11744 32840 Nombre d'assets trouvés: 1
+INFO 2025-07-16 12:31:49,311 views 11744 32840 Centre calculé: 48.8566, 2.3522 sur 1 assets
+INFO 2025-07-16 12:31:49,313 views 11744 32840 Carte FTTH: 1 assets valides, 0 ignorés
+INFO 2025-07-16 12:31:49,313 views 11744 32840 Centre de carte: 48.8566, 2.3522
+INFO 2025-07-16 12:31:50,141 views 11744 32840 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:31:50,142 views 11744 32840 Nombre d'assets trouvés: 3
+INFO 2025-07-16 12:31:50,143 views 11744 32840 Centre calculé: 45.972366666666666, 4.1859 sur 3 assets
+INFO 2025-07-16 12:31:50,145 views 11744 32840 Carte FTTH: 3 assets valides, 0 ignorés
+INFO 2025-07-16 12:31:50,145 views 11744 32840 Centre de carte: 45.972366666666666, 4.1859
+INFO 2025-07-16 12:31:51,888 views 11744 32840 Chargement de la carte FTTH pour l'utilisateur testuser
+INFO 2025-07-16 12:31:51,890 views 11744 32840 Nombre d'assets trouvés: 1000
+INFO 2025-07-16 12:31:51,957 views 11744 32840 Centre calculé: 46.495, 2.495 sur 1000 assets
+INFO 2025-07-16 12:31:51,963 views 11744 32840 Carte FTTH: 1000 assets valides, 0 ignorés
+INFO 2025-07-16 12:31:51,964 views 11744 32840 Centre de carte: 46.495, 2.495

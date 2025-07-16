@@ -9,20 +9,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body, html {
-    height: 100%; /* Ensure html and body take full height */
-    margin: 0;
-    padding: 0;
-}
-
-/* Assuming your main content area or the block content wrapper has an ID or unique class */
-/* This is a more aggressive override for testing */
-.main-content-wrapper { /* Replace with actual class/ID from your base.html */
-    height: calc(100vh - 64px); /* Example: 100vh minus a fixed header height (e.g., 64px) */
-    overflow-y: auto; /* Allow scrolling if content is taller */
-}
-    </style>
     <script>
         tailwind.config = {
             theme: {
@@ -46,257 +32,422 @@
     </script>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="flex  h-full bg-gray-50 min-h-screen flex flex-col min-h-screen">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <!-- Logo et navigation principale -->
-                <div class="flex">
-                    <!-- Logo -->
-                    <div class="flex-shrink-0 flex items-center">
-                        <a href="{% url 'dashboard' %}" class="flex items-center space-x-2">
-                            <i class="fas fa-cogs text-gmao-600 text-2xl"></i>
-                            <span class="text-xl font-bold text-gray-900">GMAO App</span>
-                        </a>
-                    </div>
+<body class="h-full bg-gray-50 font-sans">
+    <div class="flex flex-col min-h-screen">
+        <!-- Navigation -->
+   <!-- Navigation corrigée avec la bonne syntaxe -->
+<nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <!-- Logo et navigation principale -->
+            <div class="flex">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center">
+                    <a href="{% url 'dashboard' %}" class="flex items-center space-x-2">
+                        <i class="fas fa-cogs text-gmao-600 text-2xl"></i>
+                        <span class="text-xl font-bold text-gray-900">GMAO App</span>
+                    </a>
+                </div>
 
-                    <!-- Navigation links -->
-                    {% if user.is_authenticated %}
-                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                        <a href="{% url 'dashboard' %}" 
-                           class="{% if request.resolver_match.url_name == 'dashboard' %}border-gmao-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            <i class="fas fa-tachometer-alt mr-2"></i>
-                            Tableau de bord
-                        </a>
-                     {% if user_role == 'MANAGER' or user_role == 'ADMIN' %}                        
-           
-                <a href="{% url 'liste_interventions' %}" 
-                        class="{% if 'intervention' in request.resolver_match.url_name %}border-gmao-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            <i class="fas fa-tools mr-2"></i>
-                            Interventions
-                        </a>
-                        {% endif %}
-                        <a href="{% url 'liste_ordres_travail' %}" 
-                           class="{% if 'ordre' in request.resolver_match.url_name %}border-gmao-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            <i class="fas fa-tasks mr-2"></i>
-                            Ordres de travail
-                        </a>
-                    </div>
+                <!-- Navigation links -->
+                {% if user.is_authenticated %}
+                <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                    <a href="{% url 'dashboard' %}" 
+                       class="{% if request.resolver_match.url_name == 'dashboard' %}border-gmao-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">
+                        <i class="fas fa-tachometer-alt mr-2"></i>
+                        Tableau de bord
+                    </a>
+
+                    {% if user_role == 'MANAGER' or user_role == 'ADMIN' %}                        
+                    <a href="{% url 'liste_interventions' %}" 
+                       class="{% if request.resolver_match.url_name == 'liste_interventions' or request.resolver_match.url_name == 'creer_intervention' or request.resolver_match.url_name == 'modifier_intervention' or request.resolver_match.url_name == 'detail_intervention' %}border-gmao-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">
+                        <i class="fas fa-tools mr-2"></i>
+                        Interventions
+                    </a>
                     {% endif %}
-                </div>
-
-                <!-- Menu utilisateur -->
-                {% if user.is_authenticated %}
-                <div class="hidden sm:ml-6 sm:flex sm:items-center">
-                    <!-- Notifications (placeholder) -->
-                    <button type="button" class="bg-white p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gmao-500">
-                        <span class="sr-only">Voir les notifications</span>
-                        <i class="fas fa-bell h-6 w-6"></i>
-                    </button>
-
-                    <!-- Profile dropdown -->
-                    <div class="ml-3 relative">
-                        <div class="dropdown inline-block relative">
-                            <button class="bg-white rounded-full flex text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gmao-500 items-center space-x-2 px-3 py-2 hover:bg-gray-50">
-                                <div class="h-8 w-8 rounded-full bg-gmao-100 flex items-center justify-center">
-                                    <span class="text-sm font-medium text-gmao-700">
-                                        {{ user.first_name.0|default:user.username.0|upper }}
-                                    </span>
-                                </div>
-                                <span class="text-gray-700 text-sm font-medium">{{ user.first_name|default:user.username }}</span>
-                                <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
-                            </button>
-                            <ul class="dropdown-menu absolute hidden text-gray-700 pt-1 right-0 min-w-48 bg-white shadow-lg rounded-md border border-gray-200 z-50">
-                                <li>
-                                    <a href="{% url 'profil_utilisateur' %}" class="rounded-t bg-white hover:bg-gray-100 py-2 px-4 block whitespace-no-wrap flex items-center">
-                                        <i class="fas fa-user mr-2 text-gray-400"></i>
-                                        Mon profil
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{% url 'changer_mot_de_passe' %}" class="bg-white hover:bg-gray-100 py-2 px-4 block whitespace-no-wrap flex items-center">
-                                        <i class="fas fa-key mr-2 text-gray-400"></i>
-                                        Changer le mot de passe
-                                    </a>
-                                </li>
-                                <li class="border-t border-gray-100">
-                                    <a href="{% url 'deconnexion' %}" class="rounded-b bg-white hover:bg-gray-100 py-2 px-4 block whitespace-no-wrap flex items-center text-red-600">
-                                        <i class="fas fa-sign-out-alt mr-2"></i>
-                                        Se déconnecter
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <div class="flex items-center space-x-4">
-                    <a href="{% url 'connexion' %}" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
-                        Se connecter
+                    
+                    <a href="{% url 'liste_ordres_travail' %}" 
+                       class="{% if 'ordre' in request.resolver_match.url_name %}border-gmao-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">
+                        <i class="fas fa-tasks mr-2"></i>
+                        Ordres de travail
                     </a>
-                    <a href="{% url 'inscription' %}" class="bg-gmao-600 hover:bg-gmao-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                        S'inscrire
+                    
+                    <a href="{% url 'carte_ftth' %}" 
+                       class="{% if 'carte' in request.resolver_match.url_name %}border-gmao-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">
+                        <i class="fas fa-map mr-2"></i>
+                        Carte
                     </a>
                 </div>
                 {% endif %}
-
-                <!-- Menu mobile button -->
-                <div class="sm:hidden flex items-center">
-                    <button type="button" class="mobile-menu-button bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gmao-500">
-                        <span class="sr-only">Ouvrir le menu principal</span>
-                        <i class="fas fa-bars h-6 w-6"></i>
-                    </button>
-                </div>
             </div>
-        </div>
 
-        <!-- Mobile menu -->
-        <div class="mobile-menu hidden sm:hidden">
-            <div class="pt-2 pb-3 space-y-1">
-                {% if user.is_authenticated %}
-                <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}bg-gmao-50 border-gmao-500 text-gmao-700{% else %}border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800{% endif %} block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
-                    <i class="fas fa-tachometer-alt mr-2"></i>
-                    Tableau de bord
-                </a>
-                {% if user.is_authenticated and user_role == 'MANAGER' %}
-
-                <a href="{% url 'liste_interventions' %}" class="{% if 'intervention' in request.resolver_match.url_name %}bg-gmao-50 border-gmao-500 text-gmao-700{% else %}border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800{% endif %} block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
-                    <i class="fas fa-clipboard-list mr-2"></i>
-                    Interventions
-                </a>
-                 {% endif %}
-                <a href="{% url 'liste_ordres_travail' %}" class="{% if 'ordre' in request.resolver_match.url_name %}bg-gmao-50 border-gmao-500 text-gmao-700{% else %}border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800{% endif %} block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
-                    <i class="fas fa-tasks mr-2"></i>
-                    Ordres de travail
-                </a>
-                {% endif %}
-            </div>
+            <!-- Menu utilisateur -->
             {% if user.is_authenticated %}
-            <div class="pt-4 pb-3 border-t border-gray-200">
-                <div class="flex items-center px-4">
-                    <div class="flex-shrink-0">
-                        <div class="h-10 w-10 rounded-full bg-gmao-100 flex items-center justify-center">
-                            <span class="text-sm font-medium text-gmao-700">
-                                {{ user.first_name.0|default:user.username.0|upper }}
-                            </span>
+            <div class="hidden sm:ml-6 sm:flex sm:items-center">
+                <!-- Notifications -->
+                <button type="button" class="bg-white p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gmao-500 transition-colors duration-200">
+                    <span class="sr-only">Voir les notifications</span>
+                    <i class="fas fa-bell text-lg"></i>
+                </button>
+
+                <!-- Profile dropdown -->
+                <div class="ml-3 relative">
+                    <div class="dropdown">
+                        <button id="user-menu-button" class="bg-white rounded-full flex text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gmao-500 items-center space-x-2 px-3 py-2 hover:bg-gray-50 transition-colors duration-200">
+                            <div class="h-8 w-8 rounded-full bg-gmao-100 flex items-center justify-center">
+                                <span class="text-sm font-medium text-gmao-700">
+                                    {{ user.first_name.0|default:user.username.0|upper }}
+                                </span>
+                            </div>
+                            <span class="text-gray-700 text-sm font-medium">{{ user.first_name|default:user.username }}</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform duration-200" id="user-menu-arrow"></i>
+                        </button>
+                        <div id="user-menu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 hidden">
+                            <div class="py-1">
+                                <a href="{% url 'profil_utilisateur' %}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                                    <i class="fas fa-user mr-2 text-gray-400"></i>
+                                    Mon profil
+                                </a>
+                                <a href="{% url 'changer_mot_de_passe' %}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                                    <i class="fas fa-key mr-2 text-gray-400"></i>
+                                    Changer le mot de passe
+                                </a>
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <a href="{% url 'deconnexion' %}" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200">
+                                    <i class="fas fa-sign-out-alt mr-2"></i>
+                                    Se déconnecter
+                                </a>
+                            </div>
                         </div>
                     </div>
-                    <div class="ml-3">
-                        <div class="text-base font-medium text-gray-800">{{ user.first_name|default:user.username }}</div>
-                        <div class="text-sm font-medium text-gray-500">{{ user.email }}</div>
-                    </div>
                 </div>
-                <div class="mt-3 space-y-1">
-                    <a href="{% url 'profil_utilisateur' %}" class="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
-                        Mon profil
-                    </a>
-                    <a href="{% url 'changer_mot_de_passe' %}" class="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
-                        Changer le mot de passe
-                    </a>
-                    <a href="{% url 'deconnexion' %}" class="block px-4 py-2 text-base font-medium text-red-500 hover:text-red-800 hover:bg-gray-100">
-                        Se déconnecter
-                    </a>
-                </div>
+            </div>
+            {% else %}
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'connexion' %}" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                    Se connecter
+                </a>
+                <a href="{% url 'inscription' %}" class="bg-gmao-600 hover:bg-gmao-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                    S'inscrire
+                </a>
             </div>
             {% endif %}
-        </div>
-    </nav>
 
-    <!-- Messages Flash -->
-    {% if messages %}
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-        {% for message in messages %}
-        <div class="{% if message.tags == 'error' %}bg-red-100 border border-red-400 text-red-700{% elif message.tags == 'warning' %}bg-yellow-100 border border-yellow-400 text-yellow-700{% elif message.tags == 'success' %}bg-green-100 border border-green-400 text-green-700{% else %}bg-blue-100 border border-blue-400 text-blue-700{% endif %} px-4 py-3 rounded relative mb-4" role="alert">
-            <div class="flex items-center">
-                <i class="{% if message.tags == 'error' %}fas fa-exclamation-circle{% elif message.tags == 'warning' %}fas fa-exclamation-triangle{% elif message.tags == 'success' %}fas fa-check-circle{% else %}fas fa-info-circle{% endif %} mr-2"></i>
-                <span class="block sm:inline">{{ message }}</span>
+            <!-- Menu mobile button -->
+            <div class="sm:hidden flex items-center">
+                <button type="button" id="mobile-menu-button" class="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gmao-500 transition-colors duration-200">
+                    <span class="sr-only">Ouvrir le menu principal</span>
+                    <i class="fas fa-bars text-lg" id="mobile-menu-icon"></i>
+                </button>
             </div>
-            <button type="button" class="absolute top-0 bottom-0 right-0 px-4 py-3" onclick="this.parentElement.remove()">
-                <i class="fas fa-times"></i>
-            </button>
         </div>
-        {% endfor %}
     </div>
-    {% endif %}
 
-    <!-- Contenu principal -->
-    <main class="flex-1 overflow-y-auto">
-        {% block content %}
-        {% endblock %}
-    </main>
-
-    <!-- Footer -->
-                <footer class="bg-white border-t border-gray-200">
-                    <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-                    <div class="text-center text-sm text-gray-500">
-                        © 2024 GMAO App. Système de Gestion de Maintenance Assistée par Ordinateur.
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="sm:hidden hidden">
+        <div class="pt-2 pb-3 space-y-1">
+            {% if user.is_authenticated %}
+            <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}bg-gmao-50 border-gmao-500 text-gmao-700{% else %}border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800{% endif %} block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors duration-200">
+                <i class="fas fa-tachometer-alt mr-2"></i>
+                Tableau de bord
+            </a>
+                  
+            {% if user_role == "MANAGER" or user_role == "ADMIN" %}
+            <a href="{% url 'liste_interventions' %}" class="{% if request.resolver_match.url_name == 'liste_interventions' or request.resolver_match.url_name == 'creer_intervention' or request.resolver_match.url_name == 'modifier_intervention' or request.resolver_match.url_name == 'detail_intervention' %}bg-gmao-50 border-gmao-500 text-gmao-700{% else %}border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800{% endif %} block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors duration-200">
+                <i class="fas fa-tools mr-2"></i>
+                Interventions
+            </a>
+            {% endif %}
+            <a href="{% url 'liste_ordres_travail' %}" class="{% if 'ordre' in request.resolver_match.url_name %}bg-gmao-50 border-gmao-500 text-gmao-700{% else %}border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800{% endif %} block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors duration-200">
+                <i class="fas fa-tasks mr-2"></i>
+                Ordres de travail
+            </a>
+            <a href="{% url 'carte_ftth' %}" class="{% if 'carte' in request.resolver_match.url_name %}bg-gmao-50 border-gmao-500 text-gmao-700{% else %}border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800{% endif %} block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors duration-200">
+                <i class="fas fa-map mr-2"></i>
+                Carte
+            </a>
+            {% endif %}
+        </div>
+        {% if user.is_authenticated %}
+        <div class="pt-4 pb-3 border-t border-gray-200">
+            <div class="flex items-center px-4">
+                <div class="flex-shrink-0">
+                    <div class="h-10 w-10 rounded-full bg-gmao-100 flex items-center justify-center">
+                        <span class="text-sm font-medium text-gmao-700">
+                            {{ user.first_name.0|default:user.username.0|upper }}
+                        </span>
                     </div>
-                    </div>
-                </footer>
+                </div>
+                <div class="ml-3">
+                    <div class="text-base font-medium text-gray-800">{{ user.first_name|default:user.username }}</div>
+                    <div class="text-sm font-medium text-gray-500">{{ user.email }}</div>
+                </div>
+            </div>
+            <div class="mt-3 space-y-1">
+                <a href="{% url 'profil_utilisateur' %}" class="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors duration-200">
+                    <i class="fas fa-user mr-2"></i>
+                    Mon profil
+                </a>
+                <a href="{% url 'changer_mot_de_passe' %}" class="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors duration-200">
+                    <i class="fas fa-key mr-2"></i>
+                    Changer le mot de passe
+                </a>
+                <a href="{% url 'deconnexion' %}" class="block px-4 py-2 text-base font-medium text-red-500 hover:text-red-800 hover:bg-red-50 transition-colors duration-200">
+                    <i class="fas fa-sign-out-alt mr-2"></i>
+                    Se déconnecter
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</nav>
 
-    <!-- Scripts JavaScript -->
+
+
+        <!-- Messages Flash -->
+        {% if messages %}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+            {% for message in messages %}
+            <div class="{% if message.tags == 'error' %}bg-red-100 border border-red-400 text-red-700{% elif message.tags == 'warning' %}bg-yellow-100 border border-yellow-400 text-yellow-700{% elif message.tags == 'success' %}bg-green-100 border border-green-400 text-green-700{% else %}bg-blue-100 border border-blue-400 text-blue-700{% endif %} px-4 py-3 rounded relative mb-4 transition-all duration-300" role="alert">
+                <div class="flex items-center">
+                    <i class="{% if message.tags == 'error' %}fas fa-exclamation-circle{% elif message.tags == 'warning' %}fas fa-exclamation-triangle{% elif message.tags == 'success' %}fas fa-check-circle{% else %}fas fa-info-circle{% endif %} mr-2"></i>
+                    <span class="block sm:inline">{{ message }}</span>
+                </div>
+                <button type="button" class="absolute top-0 bottom-0 right-0 px-4 py-3 hover:bg-black hover:bg-opacity-10 rounded-r transition-colors duration-200" onclick="this.parentElement.style.display='none'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Contenu principal -->
+        <main class="flex-1 overflow-auto m-10">
+            {% block content %}
+            {% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 mt-auto">
+            <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+                <div class="text-center text-sm text-gray-500">
+                    © 2024 GMAO App. Système de Gestion de Maintenance Assistée par Ordinateur.
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts JavaScript améliorés -->
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const mobileMenuButton = document.querySelector('.mobile-menu-button');
-        const mobileMenu = document.querySelector('.mobile-menu');
+        // Objet global pour gérer l'application
+        const GMAOApp = {
+            // Initialisation
+            init() {
+                this.initMobileMenu();
+                this.initDropdowns();
+                this.initMessagesFlash();
+                this.initAccessibility();
+            },
 
-        if (mobileMenuButton && mobileMenu) {
-            mobileMenuButton.addEventListener('click', function() {
-                mobileMenu.classList.toggle('hidden');
-            });
-        }
+            // Gestion du menu mobile
+            initMobileMenu() {
+                const mobileMenuButton = document.getElementById('mobile-menu-button');
+                const mobileMenu = document.getElementById('mobile-menu');
+                const mobileMenuIcon = document.getElementById('mobile-menu-icon');
 
-        // Fermer le menu mobile quand un lien est cliqué
-        const mobileMenuLinks = document.querySelectorAll('.mobile-menu a');
-        mobileMenuLinks.forEach(link => {
-            link.addEventListener('click', () => {
-                if (!mobileMenu.classList.contains('hidden')) {
-                    mobileMenu.classList.add('hidden');
-                }
-            });
-        });
-
-        // Dropdown toggle
-        const dropdowns = document.querySelectorAll('.dropdown');
-        dropdowns.forEach(dropdown => {
-            const button = dropdown.querySelector('button');
-            const menu = dropdown.querySelector('.dropdown-menu');
-            
-            if (button && menu) {
-                button.addEventListener('click', function(e) {
-                    e.stopPropagation();
-
-                    // Fermer tous les autres dropdowns
-                    document.querySelectorAll('.dropdown-menu').forEach(otherMenu => {
-                        if (otherMenu !== menu) {
-                            otherMenu.classList.add('hidden');
+                if (mobileMenuButton && mobileMenu) {
+                    mobileMenuButton.addEventListener('click', () => {
+                        const isHidden = mobileMenu.classList.contains('hidden');
+                        
+                        if (isHidden) {
+                            mobileMenu.classList.remove('hidden');
+                            mobileMenuIcon.classList.remove('fa-bars');
+                            mobileMenuIcon.classList.add('fa-times');
+                        } else {
+                            mobileMenu.classList.add('hidden');
+                            mobileMenuIcon.classList.remove('fa-times');
+                            mobileMenuIcon.classList.add('fa-bars');
                         }
                     });
 
-                    // Toggle le dropdown actuel
-                    menu.classList.toggle('hidden');
+                    // Fermer le menu mobile lors du clic sur un lien
+                    const mobileMenuLinks = mobileMenu.querySelectorAll('a');
+                    mobileMenuLinks.forEach(link => {
+                        link.addEventListener('click', () => {
+                            mobileMenu.classList.add('hidden');
+                            mobileMenuIcon.classList.remove('fa-times');
+                            mobileMenuIcon.classList.add('fa-bars');
+                        });
+                    });
+                }
+            },
+
+            // Gestion des dropdowns
+            initDropdowns() {
+                const userMenuButton = document.getElementById('user-menu-button');
+                const userMenu = document.getElementById('user-menu');
+                const userMenuArrow = document.getElementById('user-menu-arrow');
+
+                if (userMenuButton && userMenu) {
+                    userMenuButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const isHidden = userMenu.classList.contains('hidden');
+                        
+                        // Fermer tous les autres dropdowns
+                        document.querySelectorAll('.dropdown div[id$="-menu"]').forEach(menu => {
+                            if (menu !== userMenu) {
+                                menu.classList.add('hidden');
+                            }
+                        });
+
+                        // Toggle le dropdown actuel
+                        if (isHidden) {
+                            userMenu.classList.remove('hidden');
+                            userMenuArrow.classList.add('rotate-180');
+                        } else {
+                            userMenu.classList.add('hidden');
+                            userMenuArrow.classList.remove('rotate-180');
+                        }
+                    });
+                }
+
+                // Fermer les dropdowns lors du clic ailleurs
+                document.addEventListener('click', () => {
+                    document.querySelectorAll('.dropdown div[id$="-menu"]').forEach(menu => {
+                        menu.classList.add('hidden');
+                    });
+                    if (userMenuArrow) {
+                        userMenuArrow.classList.remove('rotate-180');
+                    }
                 });
+            },
+
+            // Gestion des messages flash
+            initMessagesFlash() {
+                // Auto-disparition après 5 secondes
+                setTimeout(() => {
+                    const messages = document.querySelectorAll('[role="alert"]');
+                    messages.forEach(message => {
+                        message.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+                        message.style.opacity = '0';
+                        message.style.transform = 'translateX(-100%)';
+                        setTimeout(() => {
+                            if (message.parentNode) {
+                                message.parentNode.removeChild(message);
+                            }
+                        }, 500);
+                    });
+                }, 5000);
+            },
+
+            // Amélioration de l'accessibilité
+            initAccessibility() {
+                // Gestion des touches clavier pour les dropdowns
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        // Fermer tous les dropdowns
+                        document.querySelectorAll('.dropdown div[id$="-menu"]').forEach(menu => {
+                            menu.classList.add('hidden');
+                        });
+                        
+                        // Fermer le menu mobile
+                        const mobileMenu = document.getElementById('mobile-menu');
+                        const mobileMenuIcon = document.getElementById('mobile-menu-icon');
+                        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+                            mobileMenu.classList.add('hidden');
+                            if (mobileMenuIcon) {
+                                mobileMenuIcon.classList.remove('fa-times');
+                                mobileMenuIcon.classList.add('fa-bars');
+                            }
+                        }
+                    }
+                });
+
+                // Focus trap pour les dropdowns
+                const focusableElements = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+                
+                document.querySelectorAll('.dropdown').forEach(dropdown => {
+                    const menu = dropdown.querySelector('[id$="-menu"]');
+                    if (menu) {
+                        const focusableContent = menu.querySelectorAll(focusableElements);
+                        if (focusableContent.length > 0) {
+                            const firstFocusableElement = focusableContent[0];
+                            const lastFocusableElement = focusableContent[focusableContent.length - 1];
+
+                            menu.addEventListener('keydown', (e) => {
+                                if (e.key === 'Tab') {
+                                    if (e.shiftKey) {
+                                        if (document.activeElement === firstFocusableElement) {
+                                            lastFocusableElement.focus();
+                                            e.preventDefault();
+                                        }
+                                    } else {
+                                        if (document.activeElement === lastFocusableElement) {
+                                            firstFocusableElement.focus();
+                                            e.preventDefault();
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+            },
+
+            // Fonction utilitaire pour afficher des notifications
+            showNotification(message, type = 'info') {
+                const container = document.querySelector('.max-w-7xl.mx-auto.px-4.sm\\:px-6.lg\\:px-8.mt-4') || document.body;
+                
+                const colors = {
+                    success: 'bg-green-100 border-green-400 text-green-700',
+                    error: 'bg-red-100 border-red-400 text-red-700',
+                    warning: 'bg-yellow-100 border-yellow-400 text-yellow-700',
+                    info: 'bg-blue-100 border-blue-400 text-blue-700'
+                };
+
+                const icons = {
+                    success: 'fas fa-check-circle',
+                    error: 'fas fa-exclamation-circle',
+                    warning: 'fas fa-exclamation-triangle',
+                    info: 'fas fa-info-circle'
+                };
+
+                const notification = document.createElement('div');
+                notification.className = `${colors[type]} px-4 py-3 rounded relative mb-4 transition-all duration-300`;
+                notification.role = 'alert';
+                notification.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="${icons[type]} mr-2"></i>
+                        <span>${message}</span>
+                    </div>
+                    <button type="button" class="absolute top-0 bottom-0 right-0 px-4 py-3 hover:bg-black hover:bg-opacity-10 rounded-r transition-colors duration-200" onclick="this.parentElement.style.display='none'">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+
+                container.appendChild(notification);
+
+                // Auto-suppression après 5 secondes
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateX(-100%)';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 500);
+                }, 5000);
             }
+        };
+
+        // Initialisation au chargement de la page
+        document.addEventListener('DOMContentLoaded', () => {
+            GMAOApp.init();
         });
 
-        // Fermer les dropdowns quand on clique ailleurs
-        document.addEventListener('click', function() {
-            document.querySelectorAll('.dropdown-menu').forEach(menu => {
-                menu.classList.add('hidden');
-            });
-        });
-    });
-
-    setTimeout(function() {
-        const messages = document.querySelectorAll('[role="alert"]');
-        messages.forEach(message => {
-            message.style.transition = 'opacity 0.5s';
-            message.style.opacity = '0';
-            setTimeout(() => message.remove(), 500);
-        });
-    }, 5000);
-</script>
+        // Exposition globale pour utilisation dans d'autres scripts
+        window.GMAOApp = GMAOApp;
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>
