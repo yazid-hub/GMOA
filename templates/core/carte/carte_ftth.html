@@ -8,8 +8,8 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
 #map {
-    height: 80% !important;
-    width: 100% !important;
+    height: 90% !important;
+    width: 1500px !important;
     min-height: 600px !important;
     background-color: #f0f0f0; /* Add this */
     z-index: 15 !important;
@@ -272,8 +272,8 @@ main {
         </div>
     </div>
 
-    <div id="map" class="flex-grow">
-        </div>
+    <div id="map" class="w-full h-full mx-auto rounded-xl shadow-lg border border-gray-200 overflow-hidden bg-white"></div>
+
 
     <div id="sidebar" class="fixed top-0 right-0 w-80 h-full bg-white shadow-xl transform translate-x-full transition-transform duration-300 z-50 border-l-4 border-blue-500">
         <div class="p-6 h-full flex flex-col">
@@ -508,6 +508,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadExistingAssets();
     setupEventListeners();
     showNotification('Interface FTTH initialisée', 'success');
+     updateStats();
 });
 
 function initializeMap() {
@@ -537,7 +538,8 @@ function initializeMap() {
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
+        maxZoom: 15,
+        minZoom:3
     }).addTo(map);
 
 
@@ -581,6 +583,10 @@ function loadExistingAssets() {
             if (data.success && Array.isArray(data.equipments)) {
                 console.log(`✅ ${data.count} équipements chargés`);
 
+                // Vider les arrays avant de les remplir
+                equipments.length = 0;
+                cables.length = 0;
+
                 // Charger les équipements (points)
                 data.equipments.forEach(equipment => {
                     if (equipment.coordinates) {
@@ -590,6 +596,10 @@ function loadExistingAssets() {
 
                 // Charger les câbles (lignes)
                 loadCables(data.equipments);
+
+                // ✅ AJOUTER CETTE LIGNE - Mettre à jour les statistiques
+                updateStats();
+                
             } else {
                 console.error('❌ Erreur lors du chargement:', data.error || 'Aucun équipement reçu');
             }
@@ -611,10 +621,7 @@ function loadCables(equipments) {
 }
 
 function addCableToMap(cableData) {
-    if (
-        !cableData.geometrie_geojson ||
-        !cableData.geometrie_geojson.coordinates
-    ) return;
+    if (!cableData.geometrie_geojson || !cableData.geometrie_geojson.coordinates) return;
     
     const latlngs = cableData.geometrie_geojson.coordinates.map(coord => [coord[1], coord[0]]);
     
@@ -622,7 +629,8 @@ function addCableToMap(cableData) {
         color: '#7c3aed',
         weight: 3,
         opacity: 0.8
-    }).addTo(map);
+    }).addTo(drawingLayer);
+    
     cableLine.bindPopup(`
         <div>
             <h4>📏 ${cableData.name}</h4>
@@ -632,8 +640,38 @@ function addCableToMap(cableData) {
             <p><strong>Statut:</strong> ${cableData.status}</p>
         </div>
     `);
-}
 
+    // ✅ AJOUTER : Stocker le câble dans l'array
+    cables.push({
+        line: cableLine,
+        data: cableData,
+        points: latlngs,
+        metadata: {
+            id: cableData.id,
+            name: cableData.name,
+            type: 'FTTH'
+        }
+    });
+}
+function updateStats() {
+    console.log('🔄 Mise à jour des stats...');
+    console.log('Equipments array:', equipments);
+    console.log('Cables array:', cables);
+    
+    stats.total = equipments.length;
+    stats.en_service = equipments.filter(e => e.data.status === 'EN_SERVICE').length;
+    stats.en_panne = equipments.filter(e => e.data.status === 'EN_PANNE').length;
+    stats.en_maintenance = equipments.filter(e => e.data.status === 'EN_MAINTENANCE').length;
+    stats.cables = cables.length;
+
+    console.log('Stats calculées:', stats);
+
+    document.getElementById('stat-total').textContent = stats.total;
+    document.getElementById('stat-service').textContent = stats.en_service;
+    document.getElementById('stat-panne').textContent = stats.en_panne;
+    document.getElementById('stat-maintenance').textContent = stats.en_maintenance;
+    document.getElementById('stat-cables').textContent = stats.cables;
+}
 
 function openCableForm(cableData) {
     // Remplir les champs du formulaire

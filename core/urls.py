@@ -150,7 +150,7 @@ urlpatterns = [
     # ==============================================================================
     # RAPPORTS ET EXPORTS
     # ==============================================================================
-    path('rapports/<int:pk>/export-pdf/', views.export_rapport_pdf, name='export_rapport_pdf'),
+    path('rapports/<int:pk>/export-pdf/', views.export_rapport_pdf_weasy, name='export_rapport_pdf'),
     
     # ==============================================================================
     # APIs UTILITAIRES

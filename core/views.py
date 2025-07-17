@@ -35,6 +35,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
+from django.views.decorators.cache import cache_page
 
 # ==============================================================================
 # IMPORTS TIERS
@@ -52,16 +53,9 @@ except ImportError:
 # ==============================================================================
 # IMPORTS LOCAUX
 # ==============================================================================
-from .models import (
-    ProfilUtilisateur, Competence, UtilisateurCompetence, Equipe,
-    CategorieAsset, Asset, AttributPersonnaliseAsset, PieceDetachee,
-    Intervention, Operation, PointDeControle, StatutWorkflow,
-    PlanMaintenancePreventive, OrdreDeTravail, RapportExecution,
-    MouvementStock, Reponse, FichierMedia, ActionCorrective,
-    CommentaireOT, Notification, ParametreGlobal, ParametreUtilisateur,
-    DemandeReparation, BrouillonIntervention, AnnotationMedia,
-    ZoneGeographique, PlanSchema
-)
+
+
+from .models import *
 from .forms import *
 import logging
 
@@ -170,57 +164,77 @@ def dashboard(request):
     """Tableau de bord adapté selon le rôle utilisateur"""
     user_role = get_user_role(request.user)
     
-    # Statistiques de base
+    # OPTIMISATION : Une seule requête pour toutes les stats
+    from django.db.models import Count, Case, When, IntegerField
+    
+    # Stats globales en une requête
+    stats_query = OrdreDeTravail.objects.aggregate(
+        ordres_actifs=Count('id', filter=~Q(statut__est_statut_final=True)),
+        ordres_en_retard=Count('id', filter=Q(
+            date_prevue_debut__lt=timezone.now(),
+            statut__est_statut_final=False
+        )),
+        ordres_aujourdhui=Count('id', filter=Q(
+            date_prevue_debut__date=timezone.now().date()
+        ))
+    )
+    
+    # Stats assets en une requête
+    assets_stats = Asset.objects.aggregate(
+        assets_total=Count('id'),
+        assets_en_panne=Count('id', filter=Q(statut='EN_PANNE')),
+        assets_critiques=Count('id', filter=Q(statut='EN_PANNE', criticite__gte=3))
+    )
+    
+    # Stats interventions (cache simple)
+    interventions_validees = Intervention.objects.filter(statut='VALIDATED').count()
+    
     stats = {
-        'ordres_actifs': OrdreDeTravail.objects.exclude(statut__est_statut_final=True).count(),
-        'interventions_validees': Intervention.objects.filter(statut='VALIDATED').count(),
-        'assets_total': Asset.objects.count(),
-        'assets_en_panne': Asset.objects.filter(statut='EN_PANNE').count(),
+        **stats_query,
+        **assets_stats,
+        'interventions_validees': interventions_validees,
     }
     
-    # Ordres spécifiques selon le rôle
+    # OPTIMISATION : Requêtes optimisées selon le rôle
     if user_role == 'TECHNICIEN':
-        # Pour les techniciens : leurs ordres assignés uniquement
         mes_ordres = OrdreDeTravail.objects.filter(
             Q(assigne_a_technicien=request.user) | 
             Q(assigne_a_equipe__membres=request.user)
         ).exclude(statut__est_statut_final=True).select_related(
-            'intervention', 'asset', 'statut'
-        )[:5]
+            'intervention', 'asset', 'statut', 'cree_par'
+        ).prefetch_related('assigne_a_equipe__membres')[:5]
         
         ordres_recents = mes_ordres
         
     elif user_role in ['MANAGER', 'ADMIN']:
-        # Pour les managers : vue globale
         mes_ordres = OrdreDeTravail.objects.filter(
             Q(assigne_a_technicien=request.user) | 
             Q(assigne_a_equipe__membres=request.user) |
             Q(cree_par=request.user)
         ).exclude(statut__est_statut_final=True).select_related(
-            'intervention', 'asset', 'statut'
-        )[:5]
+            'intervention', 'asset', 'statut', 'cree_par'
+        ).prefetch_related('assigne_a_equipe__membres')[:5]
         
         ordres_recents = OrdreDeTravail.objects.select_related(
-            'intervention', 'asset', 'statut', 'cree_par'
-        ).order_by('-date_creation')[:10]
+            'intervention', 'asset', 'statut', 'cree_par', 'assigne_a_technicien'
+        ).prefetch_related('assigne_a_equipe__membres').order_by('-date_creation')[:10]
         
     else:
-        # Pour les autres rôles
         mes_ordres = OrdreDeTravail.objects.filter(
             Q(cree_par=request.user) |
             Q(assigne_a_technicien=request.user) | 
             Q(assigne_a_equipe__membres=request.user)
         ).exclude(statut__est_statut_final=True).select_related(
-            'intervention', 'asset', 'statut'
-        )[:5]
+            'intervention', 'asset', 'statut', 'cree_par'
+        ).prefetch_related('assigne_a_equipe__membres')[:5]
         
         ordres_recents = mes_ordres
     
-    # Assets critiques en panne
+    # OPTIMISATION : Assets critiques avec select_related
     assets_critiques = Asset.objects.filter(
         statut='EN_PANNE',
         criticite__gte=3
-    ).order_by('-criticite')[:5]
+    ).select_related('categorie').order_by('-criticite')[:5]
     
     context = {
         'stats': stats,
@@ -231,7 +245,6 @@ def dashboard(request):
     }
     
     return render(request, 'core/dashboard.html', context)
-
 # ==============================================================================
 # GESTION DES INTERVENTIONS (Manager/Admin uniquement)
 # ==============================================================================
@@ -562,7 +575,17 @@ def creer_ordre_travail(request):
 @login_required
 def detail_ordre_travail(request, pk):
     """Affiche les détails d'un ordre de travail"""
-    ordre = get_object_or_404(OrdreDeTravail, pk=pk)
+    # OPTIMISATION : Charger toutes les relations en une fois
+    ordre = get_object_or_404(
+        OrdreDeTravail.objects.select_related(
+            'intervention', 'asset', 'asset__categorie', 'statut', 
+            'cree_par', 'assigne_a_technicien'
+        ).prefetch_related(
+            'assigne_a_equipe__membres',
+            'intervention__operations__points_de_controle'
+        ), 
+        pk=pk
+    )
     
     # Vérifier les permissions d'accès
     user_role = get_user_role(request.user)
@@ -578,13 +601,18 @@ def detail_ordre_travail(request, pk):
         messages.error(request, "Vous n'avez pas accès à cet ordre de travail.")
         return redirect('liste_ordres_travail')
     
-    # Récupérer ou créer le rapport d'exécution
-    rapport, created = RapportExecution.objects.get_or_create(
+    # OPTIMISATION : Récupérer le rapport avec relations
+    rapport, created = RapportExecution.objects.select_related(
+        'cree_par'
+    ).prefetch_related(
+        'reponses__point_de_controle__operation',
+        'actions_correctives__assigne_a'
+    ).get_or_create(
         ordre_de_travail=ordre,
         defaults={'cree_par': request.user}
     )
 
-    # 🔧 Extraire les IDs des points de contrôle déjà remplis
+    # Extraire les IDs des points de contrôle déjà remplis
     reponses_ids = set()
     if rapport:
         reponses_ids = set(
@@ -603,11 +631,13 @@ def detail_ordre_travail(request, pk):
             messages.success(request, 'Commentaire ajouté!')
             return redirect('detail_ordre_travail', pk=pk)
     
-    # Commentaires
-    commentaires = ordre.commentaires.all().order_by('-date_creation')
+    # OPTIMISATION : Commentaires avec select_related
+    commentaires = ordre.commentaires.select_related('auteur').order_by('-date_creation')
     
-    # Actions correctives
-    actions_correctives = rapport.actions_correctives.all().order_by('-date_creation')
+    # OPTIMISATION : Actions correctives avec select_related
+    actions_correctives = rapport.actions_correctives.select_related(
+        'assigne_a', 'cree_par'
+    ).order_by('-date_creation')
     
     # Vérifier si l'utilisateur peut commencer l'intervention
     peut_executer = (
@@ -623,9 +653,10 @@ def detail_ordre_travail(request, pk):
         'actions_correctives': actions_correctives,
         'peut_executer': peut_executer,
         'user_role': user_role,
-        'reponses_ids': reponses_ids,  # 👈 Ajout clé
+        'reponses_ids': reponses_ids,
     }
     return render(request, 'core/ot/detail_ordre_travail.html', context)
+
 
 @login_required
 @user_passes_test(is_manager_or_admin)
@@ -1064,7 +1095,17 @@ def ajax_interventions_validees(request):
 @login_required
 def export_rapport_pdf(request, pk):
     """Exporte un rapport d'exécution en PDF."""
-    rapport = get_object_or_404(RapportExecution, pk=pk)
+    rapport = get_object_or_404(
+        RapportExecution.objects.select_related(
+            'ordre_de_travail__asset',
+            'ordre_de_travail__intervention',
+            'ordre_de_travail__cree_par',
+            'cree_par'
+        ).prefetch_related(
+            'reponses__point_de_controle__operation'
+        ),
+        pk=pk
+    )
     
     # Vérifier les permissions
     user_role = get_user_role(request.user)
@@ -1085,7 +1126,9 @@ def export_rapport_pdf(request, pk):
     context = {
         'rapport': rapport,
         'ordre': rapport.ordre_de_travail,
-        'reponses': rapport.reponses.all().order_by(
+        'reponses': rapport.reponses.select_related(
+            'point_de_controle__operation'
+        ).order_by(
             'point_de_controle__operation__ordre', 
             'point_de_controle__ordre'
         ),
@@ -1986,45 +2029,60 @@ def export_rapport_pdf(request, pk):
 @login_required
 def get_notifications_utilisateur(request):
     """
-    API pour récupérer les notifications de l'utilisateur
+    API pour récupérer les notifications de l'utilisateur - OPTIMISÉE
     """
+    # OPTIMISATION : Une seule requête avec agrégation
     notifications = Notification.objects.filter(
         utilisateur=request.user
     ).order_by('-date_creation')[:20]
     
-    data = []
-    for notif in notifications:
-        data.append({
+    # Compter les non lues en une requête
+    non_lues_count = Notification.objects.filter(
+        utilisateur=request.user,
+        lue=False
+    ).count()
+    
+    # Serialization optimisée
+    data = [
+        {
             'id': notif.id,
             'titre': notif.titre,
             'message': notif.message,
             'type': notif.type_notification,
             'lue': notif.lue,
             'date_creation': notif.date_creation.isoformat(),
-        })
+        }
+        for notif in notifications
+    ]
     
     return JsonResponse({
         'notifications': data,
-        'non_lues': notifications.filter(lue=False).count()
+        'non_lues': non_lues_count
     })
 
+
 @login_required
+@cache_page(60 * 2)  # Cache 2 minutes
 def get_statistiques_dashboard(request):
     """
-    API pour les statistiques du dashboard
+    API pour les statistiques du dashboard - OPTIMISÉE
     """
     user = request.user
     user_role = get_user_role(user)
     
-    # Statistiques selon le rôle
+    # OPTIMISATION : Requêtes agrégées
     if user_role in ['MANAGER', 'ADMIN']:
-        # Stats globales pour managers
-        stats = {
-            'ordres_actifs': OrdreDeTravail.objects.exclude(statut__est_statut_final=True).count(),
-            'ordres_en_retard': OrdreDeTravail.objects.filter(
+        # Une seule requête agrégée pour les OT
+        ot_stats = OrdreDeTravail.objects.aggregate(
+            ordres_actifs=Count('id', filter=~Q(statut__est_statut_final=True)),
+            ordres_en_retard=Count('id', filter=Q(
                 date_prevue_debut__lt=timezone.now(),
                 statut__est_statut_final=False
-            ).count(),
+            ))
+        )
+        
+        # Une seule requête pour les autres stats
+        autres_stats = {
             'demandes_reparation_en_attente': DemandeReparation.objects.filter(
                 statut='EN_ATTENTE'
             ).count(),
@@ -2034,39 +2092,54 @@ def get_statistiques_dashboard(request):
                 is_active=True
             ).count(),
         }
+        
+        stats = {**ot_stats, **autres_stats}
+        
     else:
-        # Stats personnelles pour techniciens
+        # Stats personnelles optimisées
         mes_ot = OrdreDeTravail.objects.filter(
             Q(assigne_a_technicien=user) | 
             Q(assigne_a_equipe__membres=user)
         )
         
-        stats = {
-            'mes_taches_total': mes_ot.exclude(statut__est_statut_final=True).count(),
-            'mes_taches_en_retard': mes_ot.filter(
+        stats = mes_ot.aggregate(
+            mes_taches_total=Count('id', filter=~Q(statut__est_statut_final=True)),
+            mes_taches_en_retard=Count('id', filter=Q(
                 date_prevue_debut__lt=timezone.now(),
                 statut__est_statut_final=False
-            ).count(),
-            'mes_taches_aujourdhui': mes_ot.filter(
+            )),
+            mes_taches_aujourdhui=Count('id', filter=Q(
                 date_prevue_debut__date=timezone.now().date()
-            ).count(),
-            'mes_demandes_reparation': DemandeReparation.objects.filter(
-                cree_par=user
-            ).count(),
-        }
+            ))
+        )
+        
+        # Ajout des demandes de réparation
+        stats['mes_demandes_reparation'] = DemandeReparation.objects.filter(
+            cree_par=user
+        ).count()
     
-    # Graphique évolution cette semaine
+    # OPTIMISATION : Graphique évolution optimisé
     debut_semaine = timezone.now() - timedelta(days=7)
+    
+    # Une seule requête avec GROUP BY
+    evolution_data = OrdreDeTravail.objects.filter(
+        date_fin_reelle__gte=debut_semaine
+    ).extra(
+        select={'day': 'date(date_fin_reelle)'}
+    ).values('day').annotate(
+        completed=Count('id')
+    ).order_by('day')
+    
+    # Formater pour le frontend
     evolution_semaine = []
+    evolution_dict = {item['day'].strftime('%Y-%m-%d'): item['completed'] for item in evolution_data}
     
     for i in range(7):
         date = debut_semaine + timedelta(days=i)
-        count = OrdreDeTravail.objects.filter(
-            date_fin_reelle__date=date.date()
-        ).count()
+        date_str = date.strftime('%Y-%m-%d')
         evolution_semaine.append({
-            'date': date.strftime('%Y-%m-%d'),
-            'completed': count
+            'date': date_str,
+            'completed': evolution_dict.get(date_str, 0)
         })
     
     return JsonResponse({
@@ -2075,10 +2148,11 @@ def get_statistiques_dashboard(request):
         'timestamp': timezone.now().isoformat()
     })
 
+
 @login_required
 def recherche_globale(request):
     """
-    API de recherche globale dans l'application
+    API de recherche globale dans l'application - OPTIMISÉE
     """
     query = request.GET.get('q', '').strip()
     
@@ -2087,11 +2161,11 @@ def recherche_globale(request):
     
     results = []
     
-    # Recherche dans les OT
+    # OPTIMISATION : Recherche dans les OT avec select_related
     ots = OrdreDeTravail.objects.filter(
         Q(titre__icontains=query) |
         Q(id__icontains=query)
-    )[:5]
+    ).select_related('asset', 'intervention', 'statut')[:5]
     
     for ot in ots:
         results.append({
@@ -2099,49 +2173,43 @@ def recherche_globale(request):
             'id': ot.id,
             'title': ot.titre,
             'subtitle': f"OT-{ot.id} - {ot.asset.nom}",
-            'url': f"/ordres-travail/{ot.id}/",
-            'icon': 'clipboard'
+            'url': reverse('detail_ordre_travail', args=[ot.id]),
+            'icon': 'fas fa-wrench'
         })
     
-    # Recherche dans les assets
+    # OPTIMISATION : Recherche dans les assets avec select_related
     assets = Asset.objects.filter(
         Q(nom__icontains=query) |
         Q(reference__icontains=query)
-    )[:5]
+    ).select_related('categorie')[:5]
     
     for asset in assets:
         results.append({
             'type': 'asset',
             'id': asset.id,
             'title': asset.nom,
-            'subtitle': f"{asset.reference} - {asset.get_statut_display()}",
-            'url': f"/assets/{asset.id}/detail-enrichi/",
-            'icon': 'cog'
+            'subtitle': f"{asset.reference} - {asset.categorie.nom if asset.categorie else 'Pas de catégorie'}",
+            'url': reverse('detail_asset_enrichi', args=[asset.id]),
+            'icon': 'fas fa-cog'
         })
     
-    # Recherche dans les demandes de réparation
-    demandes = DemandeReparation.objects.filter(
-        Q(numero_demande__icontains=query) |
-        Q(titre__icontains=query)
-    )[:5]
+    # OPTIMISATION : Recherche dans les interventions
+    interventions = Intervention.objects.filter(
+        Q(nom__icontains=query) |
+        Q(description__icontains=query)
+    )[:3]
     
-    for demande in demandes:
+    for intervention in interventions:
         results.append({
-            'type': 'demande_reparation',
-            'id': demande.id,
-            'title': demande.numero_demande,
-            'subtitle': f"{demande.titre} - {demande.get_statut_display()}",
-            'url': f"/demandes-reparation/{demande.id}/",
-            'icon': 'wrench'
+            'type': 'intervention',
+            'id': intervention.id,
+            'title': intervention.nom,
+            'subtitle': intervention.description[:100] if intervention.description else '',
+            'url': reverse('intervention_detail', args=[intervention.id]),
+            'icon': 'fas fa-clipboard-list'
         })
     
-    return JsonResponse({
-        'query': query,
-        'results': results,
-        'total': len(results)
-    })
-
-
+    return JsonResponse({'results': results})
 
 # ==============================================================================
 # SUPPRESSION OPÉRATIONS
@@ -3070,7 +3138,7 @@ def upload_media_ajax(request):
             point_de_controle=point,
             defaults={
                 'valeur': 'Média ajouté',
-                'est_conforme': True
+                'saisi_par': request.user
             }
         )
         
@@ -3289,7 +3357,7 @@ def upload_media_complete(request):
             point_de_controle=point,
             defaults={
                 'valeur': f'Média ajouté: {fichier.name}',
-                'est_conforme': True
+                 'saisi_par': request.user
             }
         )
         
@@ -4484,3 +4552,78 @@ def clean_invalid_coordinates():
     
     logger.info(f"Nettoyage terminé: {cleaned_count} assets nettoyés")
     return cleaned_count
+
+
+from django.http import HttpResponse
+from django.template.loader import get_template
+import io
+
+@login_required
+def export_rapport_pdf_weasy(request, pk):
+    """Export PDF avec WeasyPrint - Design moderne"""
+    rapport = get_object_or_404(RapportExecution, pk=pk)
+    ordre = rapport.ordre_de_travail
+    
+    # Vérifications permissions (même code qu'avant)
+    user_role = get_user_role(request.user)
+    can_export = (
+        user_role in ['MANAGER', 'ADMIN'] or
+        ordre.cree_par == request.user or
+        ordre.assigne_a_technicien == request.user or
+        (ordre.assigne_a_equipe and request.user in ordre.assigne_a_equipe.membres.all())
+    )
+    
+    if not can_export:
+        messages.error(request, "Vous n'avez pas accès à ce rapport.")
+        return redirect('liste_ordres_travail')
+    
+    # Préparer les données
+    reponses_avec_medias = []
+    for reponse in rapport.reponses.all().order_by(
+        'point_de_controle__operation__ordre', 
+        'point_de_controle__ordre'
+    ):
+        medias = reponse.fichiers_media.all()
+        reponses_avec_medias.append({
+            'reponse': reponse,
+            'medias': medias,
+            'nb_photos': medias.filter(type_fichier='PHOTO').count(),
+            'nb_documents': medias.filter(type_fichier='DOCUMENT').count(),
+        })
+    
+    demandes_reparation = DemandeReparation.objects.filter(
+        ordre_de_travail=ordre
+    ).order_by('-date_creation')
+    
+    context = {
+        'rapport': rapport,
+        'ordre': ordre,
+        'reponses_avec_medias': reponses_avec_medias,
+        'demandes_reparation': demandes_reparation,
+        'date_export': timezone.now(),
+        'exporte_par': request.user,
+    }
+    
+    try:
+        import weasyprint
+        
+        # Template avec CSS moderne
+        template_path = 'core/export/rapport_pdf_weasy.html'
+        template = get_template(template_path)
+        html = template.render(context, request)
+        
+        # Générer PDF avec WeasyPrint
+        pdf_file = weasyprint.HTML(string=html, base_url=request.build_absolute_uri())
+        pdf = pdf_file.write_pdf()
+        
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="rapport_moderne_OT_{ordre.id}.pdf"'
+        
+        return response
+        
+    except ImportError:
+        messages.error(request, "WeasyPrint n'est pas installé. Installez-le avec: pip install weasyprint")
+        return redirect('detail_ordre_travail', pk=ordre.pk)
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la génération du PDF: {str(e)}")
+        return redirect('detail_ordre_travail', pk=ordre.pk)

@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+{% load custom_filters %}
+
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport Intervention - {{ ordre.titre }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm 1cm;
+            @bottom-center {
+                content: "Page " counter(page) " / " counter(pages);
+                font-size: 10px;
+                color: #64748b;
+            }
+            @top-right {
+                content: "GMAO - Confidentiel";
+                font-size: 10px;
+                color: #64748b;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            font-size: 14px;
+        }
+
+        /* Header ultra moderne */
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(79, 70, 229, 0.3);
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%);
+            z-index: 1;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+            letter-spacing: -0.02em;
+        }
+
+        .header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+
+        .header-badges {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .header-badge {
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(10px);
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.3);
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .intervention-card {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(20px);
+            padding: 1.5rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .intervention-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-weight: 700;
+        }
+
+        .intervention-meta {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.9rem;
+            flex-wrap: wrap;
+        }
+
+        .intervention-meta span {
+            position: relative;
+            padding-left: 1.2rem;
+            opacity: 0.95;
+        }
+
+        .intervention-meta span::before {
+            content: '●';
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: #fbbf24;
+            font-size: 1.2em;
+        }
+
+        /* Cards d'informations modernes */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .info-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .info-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--accent-color);
+        }
+
+        .info-card.status { --accent-color: linear-gradient(90deg, #10b981, #059669); }
+        .info-card.tech { --accent-color: linear-gradient(90deg, #3b82f6, #1e40af); }
+        .info-card.start { --accent-color: linear-gradient(90deg, #f59e0b, #d97706); }
+        .info-card.end { --accent-color: linear-gradient(90deg, #8b5cf6, #7c3aed); }
+
+        .info-card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-bottom: 1rem;
+            background: var(--accent-color);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .info-card h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .info-card p {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0f172a;
+            line-height: 1.3;
+        }
+
+        /* Opérations avec design moderne */
+        .operation {
+            background: white;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            page-break-inside: avoid;
+        }
+
+        .operation-header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .operation-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        }
+
+        .operation-header-content {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .operation-number {
+            width: 64px;
+            height: 64px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 900;
+            border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .operation-title h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+            font-weight: 700;
+        }
+
+        .operation-title p {
+            opacity: 0.85;
+            font-size: 0.9rem;
+        }
+
+        /* Points de contrôle ultra modernes */
+        .point-controle {
+            padding: 2rem;
+            border-bottom: 1px solid #f1f5f9;
+            position: relative;
+            page-break-inside: avoid;
+        }
+
+        .point-controle:last-child {
+            border-bottom: none;
+        }
+
+        .point-controle::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--point-color);
+            border-radius: 0 2px 2px 0;
+        }
+
+        .point-controle.boolean { --point-color: linear-gradient(180deg, #10b981, #059669); }
+        .point-controle.number { --point-color: linear-gradient(180deg, #3b82f6, #1e40af); }
+        .point-controle.text { --point-color: linear-gradient(180deg, #8b5cf6, #7c3aed); }
+        .point-controle.select { --point-color: linear-gradient(180deg, #f59e0b, #d97706); }
+
+        .point-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .point-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: white;
+            background: var(--point-color);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            flex-shrink: 0;
+        }
+
+        .point-content {
+            flex: 1;
+        }
+
+        .point-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .point-title h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #0f172a;
+            line-height: 1.3;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge.obligatoire {
+            background: linear-gradient(90deg, #fef2f2, #fee2e2);
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .badge.type {
+            background: linear-gradient(90deg, #f8fafc, #f1f5f9);
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        .point-aide {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #93c5fd;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .point-aide::before {
+            content: 'ℹ️';
+            font-size: 1.1rem;
+            margin-right: 0.5rem;
+        }
+
+        .point-aide p {
+            color: #1e40af;
+            font-size: 0.9rem;
+            margin: 0;
+            display: inline;
+        }
+
+        /* Réponse avec design premium */
+        .reponse {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 2px solid #10b981;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.1);
+        }
+
+        .reponse::before {
+            content: '✓';
+            position: absolute;
+            top: -12px;
+            left: 1.5rem;
+            background: #10b981;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .reponse-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .reponse-header h4 {
+            color: #065f46;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .reponse-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #047857;
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .reponse-meta {
+            font-size: 0.8rem;
+            color: #059669;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        /* Médias avec design moderne */
+        .medias {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.1);
+        }
+
+        .medias-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .medias-header h4 {
+            color: #92400e;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .medias-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .media-item {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid #fbbf24;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .media-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .media-icon.photo { background: linear-gradient(135deg, #ec4899, #be185d); }
+        .media-icon.audio { background: linear-gradient(135deg, #10b981, #059669); }
+        .media-icon.video { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .media-icon.document { background: linear-gradient(135deg, #3b82f6, #1e40af); }
+
+        .media-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .media-name {
+            font-weight: 600;
+            color: #0f172a;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .media-meta {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        /* Demandes de réparation */
+        .reparations {
+            background: white;
+            border-radius: 20px;
+            margin: 2rem 0;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            border: 2px solid #fecaca;
+        }
+
+        .reparations-header {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            padding: 2rem;
+        }
+
+        .reparations-header-content {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .reparations-icon {
+            width: 64px;
+            height: 64px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .demande-item {
+            padding: 2rem;
+            border-bottom: 1px solid #fecaca;
+        }
+
+        .demande-item:last-child {
+            border-bottom: none;
+        }
+
+        .demande-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+
+        .demande-id {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .demande-number {
+            width: 44px;
+            height: 44px;
+            background: #fef2f2;
+            border: 2px solid #fecaca;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #dc2626;
+            font-size: 0.8rem;
+        }
+
+        .demande-status {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(90deg, #fef2f2, #fee2e2);
+            color: #dc2626;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid #fecaca;
+        }
+
+        .demande-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #dc2626;
+            margin-bottom: 0.75rem;
+        }
+
+        .demande-description {
+            color: #374151;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .demande-meta {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+            color: #6b7280;
+            flex-wrap: wrap;
+        }
+
+        /* Commentaire global */
+        .commentaire-global {
+            background: white;
+            border-radius: 20px;
+            margin: 2rem 0;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            border: 2px solid #a7f3d0;
+        }
+
+        .commentaire-header {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
+            padding: 2rem;
+        }
+
+        .commentaire-content {
+            padding: 2rem;
+        }
+
+        .commentaire-text {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border-left: 4px solid #10b981;
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-size: 1.1rem;
+            line-height: 1.7;
+            color: #065f46;
+        }
+
+        /* Footer moderne */
+        .footer {
+            margin-top: 3rem;
+            padding: 2rem 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--stat-color);
+        }
+
+        .stat-card.points { --stat-color: linear-gradient(90deg, #3b82f6, #1e40af); }
+        .stat-card.medias { --stat-color: linear-gradient(90deg, #f59e0b, #d97706); }
+        .stat-card.reparations { --stat-color: linear-gradient(90deg, #dc2626, #b91c1c); }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1rem;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            background: var(--stat-color);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+            line-height: 1;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Signature finale */
+        .signature {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .signature-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            border-radius: 20px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            box-shadow: 0 15px 35px rgba(139, 92, 246, 0.3);
+        }
+
+        .signature-title {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+
+        .signature-subtitle {
+            color: #64748b;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+
+        .signature-details {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .signature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .signature-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+        }
+
+        .signature-label {
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .signature-value {
+            color: #0f172a;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .footer-note {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 21cm) {
+            .info-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .medias-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .signature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Ultra Moderne -->
+    <div class="header">
+        <div class="header-content">
+            <h1>📋 RAPPORT D'INTERVENTION</h1>
+            <p class="subtitle">Système GMAO - Maintenance Professionnelle</p>
+            
+            <div class="header-badges">
+                <div class="header-badge">
+                    #{{ ordre.id }} • ID Intervention
+                </div>
+                <div class="header-badge">
+                    {{ rapport.get_statut_rapport_display }}
+                </div>
+            </div>
+            
+            <div class="intervention-card">
+                <h2>{{ ordre.titre }}</h2>
+                <div class="intervention-meta">
+                    <span>{{ ordre.asset.nom }}</span>
+                    <span>{{ ordre.intervention.nom }}</span>
+                    <span>{{ ordre.intervention.duree_estimee_heures }}h estimées</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards d'informations -->
+    <div class="info-grid">
+        <div class="info-card status">
+            <div class="info-card-icon">✓</div>
+            <h3>Statut</h3>
+            <p>{{ rapport.get_statut_rapport_display }}</p>
+        </div>
+        
+        <div class="info-card tech">
+            <div class="info-card-icon">👤</div>
+            <h3>Technicien</h3>
+            <p>{{ rapport.cree_par.get_full_name|default:rapport.cree_par.username }}</p>
+        </div>
+        
+        <div class="info-card start">
+            <div class="info-card-icon">🕐</div>
+            <h3>Début</h3>
+            <p>
+                {% if rapport.date_execution_debut %}
+                    {{ rapport.date_execution_debut|date:"d/m H:i" }}
+                {% else %}
+                    Non démarrée
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="info-card end">
+            <div class="info-card-icon">🏁</div>
+            <h3>Fin</h3>
+            <p>
+                {% if rapport.date_execution_fin %}
+                    {{ rapport.date_execution_fin|date:"d/m H:i" }}
+                {% else %}
+                    En cours
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+  <!-- REMPLACEZ cette partie dans votre template : -->
+
+    <!-- Opérations et réponses -->
+    {% if reponses_avec_medias %}
+        {% for reponse_data in reponses_avec_medias %}
+            {% ifchanged reponse_data.reponse.point_de_controle.operation %}
+                {% if not forloop.first %}
+                    </div> <!-- Fermeture opération précédente -->
+                {% endif %}
+                
+                <!-- Nouvelle opération -->
+                <div class="operation">
+                    <div class="operation-header">
+                        <div class="operation-header-content">
+                            <div class="operation-number">{{ reponse_data.reponse.point_de_controle.operation.ordre }}</div>
+                            <div class="operation-title">
+                                <h2>{{ reponse_data.reponse.point_de_controle.operation.nom }}</h2>
+                                <p>Étape {{ reponse_data.reponse.point_de_controle.operation.ordre }} de l'intervention</p>
+                            </div>
+                        </div>
+                    </div>
+            {% endifchanged %}
+            
+            <!-- Point de contrôle -->
+            <div class="point-controle {{ reponse_data.reponse.point_de_controle.type_champ|lower }}">
+                <div class="point-header">
+                    <div class="point-icon">
+                        {% if reponse_data.reponse.point_de_controle.type_champ == 'BOOLEAN' %}✓
+                        {% elif reponse_data.reponse.point_de_controle.type_champ == 'NUMBER' %}123
+                        {% elif reponse_data.reponse.point_de_controle.type_champ == 'SELECT' %}📋
+                        {% else %}📝{% endif %}
+                    </div>
+                    
+                    <div class="point-content">
+                        <div class="point-title">
+                            <h3>{{ reponse_data.reponse.point_de_controle.label }}</h3>
+                            {% if reponse_data.reponse.point_de_controle.est_obligatoire %}
+                                <span class="badge obligatoire">★ Obligatoire</span>
+                            {% endif %}
+                            <span class="badge type">{{ reponse_data.reponse.point_de_controle.get_type_champ_display }}</span>
+                        </div>
+                        
+                        {% if reponse_data.reponse.point_de_controle.aide %}
+                        <div class="point-aide">
+                            <p>{{ reponse_data.reponse.point_de_controle.aide }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Réponse -->
+                        <div class="reponse">
+                            <div class="reponse-header">
+                                <h4>Réponse validée</h4>
+                            </div>
+                            <div class="reponse-value">{{ reponse_data.reponse.valeur|default:"(Aucune réponse)" }}</div>
+                            <div class="reponse-meta">
+                                <span>🕐 {{ reponse_data.reponse.date_reponse|date:"d/m/Y à H:i" }}</span>
+                                {% if reponse_data.reponse.saisi_par %}
+                                    <span>👤 {{ reponse_data.reponse.saisi_par.get_full_name|default:reponse_data.reponse.saisi_par.username }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Médias -->
+                        {% if reponse_data.medias %}
+                        <div class="medias">
+                            <div class="medias-header">
+                                <h4>📎 {{ reponse_data.medias.count }} média{{ reponse_data.medias.count|pluralize }} attaché{{ reponse_data.medias.count|pluralize }}</h4>
+                            </div>
+                            <div class="medias-grid">
+                                {% for media in reponse_data.medias %}
+                                <div class="media-item">
+                                    <div class="media-icon {{ media.type_fichier|lower }}">
+                                        {% if media.type_fichier == 'PHOTO' %}📷
+                                        {% elif media.type_fichier == 'AUDIO' %}🎵
+                                        {% elif media.type_fichier == 'VIDEO' %}🎬
+                                        {% else %}📄{% endif %}
+                                    </div>
+                                    <div class="media-details">
+                                        <div class="media-name">{{ media.nom_original }}</div>
+                                        <div class="media-meta">{{ media.taille_octets|filesizeformat }} • {{ media.date_upload|date:"d/m H:i" }}</div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            {% if forloop.last %}
+                </div> <!-- Fermeture dernière opération -->
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <!-- Cas où il n'y a aucune réponse -->
+        <div class="operation">
+            <div class="operation-header">
+                <div class="operation-header-content">
+                    <div class="operation-number">!</div>
+                    <div class="operation-title">
+                        <h2>Aucune réponse enregistrée</h2>
+                        <p>Cette intervention n'a pas encore de réponses saisies</p>
+                    </div>
+                </div>
+            </div>
+            <div class="point-controle">
+                <div style="text-align: center; padding: 3rem; color: #64748b;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📝</div>
+                    <p style="font-style: italic; font-size: 1.1rem;">
+                        Les réponses aux points de contrôle apparaîtront ici une fois l'intervention exécutée.
+                    </p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+            <div class="footer-note">
+                <p>🔒 Document confidentiel • Propriété de l'entreprise</p>
+                <p>Ce rapport a été généré automatiquement et certifié par le système GMAO</p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

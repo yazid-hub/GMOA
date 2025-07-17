@@ -134,17 +134,16 @@
                                     {% endif %}
                                 </select>
                                 
-                                {% elif point.type_champ == 'CHECKBOX' %}
-                                <label class="flex items-center">
-                                    <input type="checkbox" 
-                                           name="reponse_{{ point.id }}" 
-                                           value="1"
-                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                           {% if reponses_existantes|get_item:point.id %}checked{% endif %}>
-                                    <span class="ml-2 text-sm text-gray-700">Oui</span>
-                                </label>
-                                
-                                {% elif point.type_champ == 'DATE' %}
+                                    {% elif point.type_champ == 'BOOLEAN' %}
+                                    <select name="reponse_{{ point.id }}" 
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            {% if point.est_obligatoire %}data-required="true"{% endif %}>
+                                        <option value="">-- Choisir --</option>
+                                        <option value="OUI" {% if reponses_existantes|get_item:point.id == 'OUI' %}selected{% endif %}>Oui</option>
+                                        <option value="NON" {% if reponses_existantes|get_item:point.id == 'NON' %}selected{% endif %}>Non</option>
+                                    </select>
+
+                                    {% elif point.type_champ == 'DATE' %}
                                 <input type="date" 
                                        name="reponse_{{ point.id }}" 
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -378,7 +377,7 @@ function finalize() {
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'action';
-        input.value = 'finaliser';
+        input.value = 'finaliser_intervention';
         form.appendChild(input);
         form.removeAttribute('novalidate');
         form.submit();

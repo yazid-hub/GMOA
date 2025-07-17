@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import PasswordChangeForm
 from django.utils import timezone
 from datetime import timedelta
-
+from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm 
 from .models import (
     Intervention, Operation, PointDeControle, ProfilUtilisateur, 
     OrdreDeTravail, Asset, Equipe, StatutWorkflow, RapportExecution, 
@@ -552,3 +552,17 @@ class ReponseForm(forms.ModelForm):
                     'type': 'date',
                     'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                 })
+class ProfilUtilisateurUpdateForm(forms.ModelForm):
+    """Formulaire pour que l'utilisateur modifie les informations de son profil GMAO."""
+    class Meta:
+        model = ProfilUtilisateur
+        fields = ['telephone']
+        labels = {
+            'telephone': _('Phone Number'),
+        }
+        widgets = {
+            'telephone': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': '+33 1 23 45 67 89'
+            }),
+        }
