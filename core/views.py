@@ -1,92 +1,121 @@
-# Fichier : core/views.py - Version complète avec workflow Manager/Technicien
+# core/views.py - Imports nettoyés et organisés
 
 # ==============================================================================
-# IMPORTATIONS
+# IMPORTS STANDARD PYTHON
 # ==============================================================================
-
 import json
 import os
+import uuid
 from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from io import BytesIO
-from django.utils.html import escape
-from django.http import Http404
+
+# ==============================================================================
+# IMPORTS DJANGO CORE
+# ==============================================================================
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db import models
-from django.db.models import (Count, Sum, Avg, F, Q, Case, When, IntegerField, 
-                             Exists, OuterRef, BooleanField, CharField, Max)
+from django.db import models, transaction
+from django.db.models import (
+    Count, Sum, Avg, F, Q, Case, When, IntegerField, 
+    Exists, OuterRef, BooleanField, CharField, Max
+)
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import get_template
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from django.conf import settings
-import logging
-from decimal import Decimal, InvalidOperation
-from .models import Asset, CategorieAsset, OrdreDeTravail
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.contrib.gis.geos import GEOSGeometry
 
+# ==============================================================================
+# IMPORTS TIERS
+# ==============================================================================
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
-# Configuration du logging
-logger = logging.getLogger(__name__)
-# core/views_suppression.py
-# Vues pour la suppression des opérations et points de contrôle
-# À ajouter dans core/views.py
+try:
+    from xhtml2pdf import pisa
+except ImportError:
+    pisa = None
 
-from django.db import transaction
-from .models import Operation, PointDeControle, Intervention, Reponse
-
-# Importations des modèles
-from .models import *
-
-# Importations des formulaires
+# ==============================================================================
+# IMPORTS LOCAUX
+# ==============================================================================
+from .models import (
+    ProfilUtilisateur, Competence, UtilisateurCompetence, Equipe,
+    CategorieAsset, Asset, AttributPersonnaliseAsset, PieceDetachee,
+    Intervention, Operation, PointDeControle, StatutWorkflow,
+    PlanMaintenancePreventive, OrdreDeTravail, RapportExecution,
+    MouvementStock, Reponse, FichierMedia, ActionCorrective,
+    CommentaireOT, Notification, ParametreGlobal, ParametreUtilisateur,
+    DemandeReparation, BrouillonIntervention, AnnotationMedia,
+    ZoneGeographique, PlanSchema
+)
 from .forms import *
-# ==============================================================================
-# NOUVELLES VUES POUR L'EXÉCUTION D'INTERVENTION AMÉLIORÉE
-# À ajouter dans core/views.py
-# ==============================================================================
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
-from PIL import Image
-import uuid
-# ==============================================================================
-# FONCTIONS DE CONTRÔLE D'ACCÈS
-# ==============================================================================
+import logging
 
-def is_manager_or_admin(user):
-    """Vérifie si l'utilisateur est Manager ou Admin"""
-    if not user.is_authenticated:
-        return False
-    try:
-        return user.profil.role in ['MANAGER', 'ADMIN']
-    except:
-        return False
+logger = logging.getLogger(__name__)
 
-def is_technicien(user):
-    """Vérifie si l'utilisateur est Technicien"""
-    if not user.is_authenticated:
-        return False
-    try:
-        return user.profil.role == 'TECHNICIEN'
-    except:
-        return False
+# ==============================================================================
+# FONCTIONS UTILITAIRES
+# ==============================================================================
 
 def get_user_role(user):
-    """Récupère le rôle de l'utilisateur"""
+    """Récupère le rôle d'un utilisateur"""
     try:
-        return user.profil.role if hasattr(user, 'profil') else 'OPERATEUR'
-    except:
+        return user.profil.role
+    except AttributeError:
         return 'OPERATEUR'
 
+def is_manager_or_admin(user):
+    """Vérifie si l'utilisateur est manager ou admin"""
+    return get_user_role(user) in ['MANAGER', 'ADMIN']
+
+def is_admin(user):
+    """Vérifie si l'utilisateur est admin"""
+    return get_user_role(user) == 'ADMIN'
+
+def _validate_coordinates(lat, lng):
+    """Valide les coordonnées GPS"""
+    if lat is None or lng is None:
+        return False
+    
+    try:
+        lat_float = float(lat)
+        lng_float = float(lng)
+        
+        # Vérifier les limites géographiques
+        if -90 <= lat_float <= 90 and -180 <= lng_float <= 180:
+            # Exclure les coordonnées nulles
+            return not (lat_float == 0 and lng_float == 0)
+        
+        return False
+    except (ValueError, TypeError, InvalidOperation):
+        return False
+
+def _format_file_size(size_bytes):
+    """Formate la taille d'un fichier en format lisible"""
+    if size_bytes == 0:
+        return "0 B"
+    
+    size_names = ["B", "KB", "MB", "GB"]
+    i = 0
+    while size_bytes >= 1024 and i < len(size_names) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    
+    return f"{size_bytes:.1f} {size_names[i]}"
 # ==============================================================================
 # VUES POUR L'AUTHENTIFICATION
 # ==============================================================================

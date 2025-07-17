@@ -830,3 +830,23 @@ INFO 2025-07-16 16:37:22,760 views 24496 4940 Nombre d'assets trouvés: 13
 INFO 2025-07-16 16:37:22,763 views 24496 4940 Centre calculé: 32.484686, 10.724971692307692 sur 13 assets
 INFO 2025-07-16 16:37:22,766 views 24496 4940 Carte FTTH: 13 assets valides, 0 ignorés
 INFO 2025-07-16 16:37:22,766 views 24496 4940 Centre de carte: 32.484686, 10.724971692307692
+INFO 2025-07-16 16:47:02,786 views 25156 30184 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 16:47:02,788 views 25156 30184 Nombre d'assets trouvés: 13
+INFO 2025-07-16 16:47:02,791 views 25156 30184 Centre calculé: 32.484686, 10.724971692307692 sur 13 assets
+INFO 2025-07-16 16:47:02,795 views 25156 30184 Carte FTTH: 13 assets valides, 0 ignorés
+INFO 2025-07-16 16:47:02,795 views 25156 30184 Centre de carte: 32.484686, 10.724971692307692
+INFO 2025-07-16 17:38:22,915 views 29804 34476 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-16 17:38:22,917 views 29804 34476 Nombre d'assets trouvés: 13
+INFO 2025-07-16 17:38:22,921 views 29804 34476 Centre calculé: 32.484686, 10.724971692307692 sur 13 assets
+INFO 2025-07-16 17:38:22,924 views 29804 34476 Carte FTTH: 13 assets valides, 0 ignorés
+INFO 2025-07-16 17:38:22,925 views 29804 34476 Centre de carte: 32.484686, 10.724971692307692
+INFO 2025-07-17 09:50:10,780 views 29804 5256 Chargement de la carte FTTH pour l'utilisateur admin
+INFO 2025-07-17 09:50:10,782 views 29804 5256 Nombre d'assets trouvés: 13
+INFO 2025-07-17 09:50:10,789 views 29804 5256 Centre calculé: 32.484686, 10.724971692307692 sur 13 assets
+INFO 2025-07-17 09:50:10,795 views 29804 5256 Carte FTTH: 13 assets valides, 0 ignorés
+INFO 2025-07-17 09:50:10,795 views 29804 5256 Centre de carte: 32.484686, 10.724971692307692
+INFO 2025-07-17 10:13:26,232 views 34836 37480 Chargement de la carte FTTH pour l'utilisateur technicien1
+INFO 2025-07-17 10:13:26,261 views 34836 37480 Nombre d'assets trouvés: 13
+INFO 2025-07-17 10:13:26,268 views 34836 37480 Centre calculé: 32.484686, 10.724971692307692 sur 13 assets
+INFO 2025-07-17 10:13:26,275 views 34836 37480 Carte FTTH: 13 assets valides, 0 ignorés
+INFO 2025-07-17 10:13:26,275 views 34836 37480 Centre de carte: 32.484686, 10.724971692307692

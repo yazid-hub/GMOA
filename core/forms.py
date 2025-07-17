@@ -1,16 +1,17 @@
-# Fichier : core/forms.py - Version Corrigée et Complète
+# core/forms.py - Version finale corrigée
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import User
+from django.contrib.auth.forms import PasswordChangeForm
 from django.utils import timezone
 from datetime import timedelta
-from django.contrib.auth.forms import PasswordChangeForm
 
 from .models import (
     Intervention, Operation, PointDeControle, ProfilUtilisateur, 
     OrdreDeTravail, Asset, Equipe, StatutWorkflow, RapportExecution, 
-    Reponse, ActionCorrective, CommentaireOT
+    Reponse, ActionCorrective, CommentaireOT, CategorieAsset,
+    PieceDetachee, Competence
 )
 
 # ==============================================================================
@@ -18,81 +19,96 @@ from .models import (
 # ==============================================================================
 
 class InterventionForm(forms.ModelForm):
+    """Formulaire pour créer/modifier une intervention."""
+    
     class Meta:
         model = Intervention
         fields = ['nom', 'description', 'statut', 'duree_estimee_heures', 'techniciens_requis']
         
         labels = {
-            'nom': _('Name'),
-            'description': _('Description'),
-            'statut': _('Status'),
-            'duree_estimee_heures': _('Estimated duration (hours)'),
-            'techniciens_requis': _('Required technicians'),
-        }
-        
-        help_texts = {
-            'description': _('Describe the general purpose of this intervention.'),
-            'duree_estimee_heures': _('Estimated duration of the intervention in hours.'),
-            'techniciens_requis': _('Number of technicians required.'),
+            'nom': 'Nom de l\'intervention',
+            'description': 'Description',
+            'statut': 'Statut',
+            'duree_estimee_heures': 'Durée estimée (heures)',
+            'techniciens_requis': 'Techniciens requis',
         }
         
         widgets = {
             'nom': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Ex: Maintenance préventive pompe'
+                'placeholder': 'Ex: Maintenance pompe centrifuge'
             }),
             'description': forms.Textarea(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
                 'rows': 3,
-                'placeholder': 'Décrivez l\'objectif de cette intervention...'
+                'placeholder': 'Description détaillée de l\'intervention...'
             }),
             'statut': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             }),
             'duree_estimee_heures': forms.NumberInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'min': '1'
+                'min': '0',
+                'step': '0.5',
+                'placeholder': '2.5'
             }),
             'techniciens_requis': forms.NumberInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'min': '1'
+                'min': '1',
+                'placeholder': '1'
             }),
         }
 
 class OperationForm(forms.ModelForm):
+    """Formulaire pour créer/modifier une opération."""
+    
     class Meta:
         model = Operation
-        fields = ['nom']
+        fields = ['nom', 'ordre']  # SEULEMENT ces champs existent dans le modèle
+        
         labels = {
-            'nom': _('Step Name'),
+            'nom': 'Nom de l\'opération',
+            'ordre': 'Ordre d\'exécution',
         }
+        
         widgets = {
             'nom': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Ex: Vérification visuelle'
+                'placeholder': 'Ex: Contrôle visuel'
+            }),
+            'ordre': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'min': '1',
+                'placeholder': '1'
             }),
         }
 
 class PointDeControleForm(forms.ModelForm):
+    """Formulaire pour créer/modifier un point de contrôle."""
+    
     class Meta:
         model = PointDeControle
         fields = [
             'label', 'type_champ', 'aide', 'options', 'est_obligatoire',
-            'permettre_photo', 'permettre_audio', 'permettre_video'
+            'ordre', 'permettre_photo', 'permettre_audio', 'permettre_video',
+            'permettre_fichiers', 'depend_de', 'condition_affichage'
         ]
+        
         labels = {
-            'label': _('Label'),
-            'type_champ': _('Field Type'),
-            'aide': _('Help Text'),
-            'options': _('Options'),
-            'est_obligatoire': _('Required'),
-            'permettre_photo': _('Allow Photos'),
-            'permettre_audio': _('Allow Audio Comments'),
-            'permettre_video': _('Allow Video Recording'),
+            'label': 'Libellé du point de contrôle',
+            'type_champ': 'Type de champ',
+            'aide': 'Aide/Instructions',
+            'options': 'Options (séparées par ;)',
+            'est_obligatoire': 'Obligatoire',
+            'ordre': 'Ordre',
+            'permettre_photo': 'Autoriser photos',
+            'permettre_audio': 'Autoriser audio',
+            'permettre_video': 'Autoriser vidéo',
+            'permettre_fichiers': 'Autoriser fichiers',
+            'depend_de': 'Dépend du point',
+            'condition_affichage': 'Condition d\'affichage',
         }
-        help_texts = {
-            'options': _('For lists, separate options with a semicolon (;).'),
-        }
+        
         widgets = {
             'label': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
@@ -111,6 +127,17 @@ class PointDeControleForm(forms.ModelForm):
                 'rows': 2,
                 'placeholder': 'Ex: Conforme;Non conforme;À vérifier'
             }),
+            'ordre': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'min': '1'
+            }),
+            'depend_de': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            }),
+            'condition_affichage': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Ex: OUI, > 5, CONFORME'
+            }),
             'est_obligatoire': forms.CheckboxInput(attrs={
                 'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
             }),
@@ -123,93 +150,54 @@ class PointDeControleForm(forms.ModelForm):
             'permettre_video': forms.CheckboxInput(attrs={
                 'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
             }),
-        }
-
-# ==============================================================================
-# FORMULAIRES POUR LA GESTION DES UTILISATEURS
-# ==============================================================================
-
-class UserUpdateForm(forms.ModelForm):
-    """Formulaire pour que l'utilisateur modifie ses informations de base."""
-    class Meta:
-        model = User
-        fields = ['first_name', 'last_name', 'email']
-        labels = {
-            'first_name': _('First Name'),
-            'last_name': _('Last Name'),
-            'email': _('Email Address'),
-        }
-        widgets = {
-            'first_name': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            }),
-            'last_name': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            }),
-            'email': forms.EmailInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            'permettre_fichiers': forms.CheckboxInput(attrs={
+                'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
             }),
         }
-
-class ProfilUtilisateurUpdateForm(forms.ModelForm):
-    """Formulaire pour que l'utilisateur modifie les informations de son profil GMAO."""
-    class Meta:
-        model = ProfilUtilisateur
-        fields = ['telephone']
-        labels = {
-            'telephone': _('Phone Number'),
-        }
-        widgets = {
-            'telephone': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': '+33 1 23 45 67 89'
-            }),
-        }
-
-class CustomPasswordChangeForm(PasswordChangeForm):
-    """Formulaire personnalisé pour le changement de mot de passe."""
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Traduction des champs
-        self.fields['old_password'].label = _("Ancien mot de passe")
-        self.fields['new_password1'].label = _("Nouveau mot de passe")
-        self.fields['new_password2'].label = _("Confirmation du nouveau mot de passe")
-        
-        # Ajout des classes CSS Tailwind
-        for field_name, field in self.fields.items():
-            field.widget.attrs.update({
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            })
 
 # ==============================================================================
 # FORMULAIRES POUR LES ORDRES DE TRAVAIL
 # ==============================================================================
 
 class OrdreDeTravailForm(forms.ModelForm):
-    """Formulaire pour la création d'ordres de travail."""
+    """Formulaire pour créer un ordre de travail."""
     
     class Meta:
         model = OrdreDeTravail
         fields = [
-            'titre', 'description_detaillee', 'type_OT', 'intervention', 'asset', 'priorite',
-            'date_prevue_debut', 'assigne_a_technicien', 'assigne_a_equipe'
+            'titre', 'description_detaillee', 'asset', 'intervention', 'type_OT', 
+            'priorite', 'date_prevue_debut', 'assigne_a_technicien', 'assigne_a_equipe'
         ]
+        
+        labels = {
+            'titre': 'Titre',
+            'description_detaillee': 'Description détaillée',
+            'asset': 'Asset concerné',
+            'intervention': 'Intervention',
+            'type_OT': 'Type d\'ordre de travail',
+            'priorite': 'Priorité',
+            'date_prevue_debut': 'Date prévue de début',
+            'assigne_a_technicien': 'Technicien assigné',
+            'assigne_a_equipe': 'Équipe assignée',
+        }
+        
         widgets = {
             'titre': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Ex: Maintenance préventive pompe A1'
+                'placeholder': 'Ex: Maintenance pompe P-101'
             }),
             'description_detaillee': forms.Textarea(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Ex: la pompe ne fonctinne pas à cause de ...'
+                'rows': 3,
+                'placeholder': 'Description détaillée de l\'ordre de travail...'
             }),
-            'type_OT': forms.Select(attrs={
+            'asset': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             }),
             'intervention': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             }),
-            'asset': forms.Select(attrs={
+            'type_OT': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             }),
             'priorite': forms.Select(attrs={
@@ -226,102 +214,36 @@ class OrdreDeTravailForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             }),
         }
-        
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        # Filtrer les interventions validées uniquement
-        self.fields['intervention'].queryset = Intervention.objects.filter(
-            statut='VALIDATED'
-        ).order_by('nom')
-        
-        # Filtrer les assets en service ou en maintenance
-        self.fields['asset'].queryset = Asset.objects.filter(
-            statut__in=['EN_SERVICE', 'EN_MAINTENANCE']
-        ).order_by('nom')
-        
-        # Filtrer les techniciens actifs
-        self.fields['assigne_a_technicien'].queryset = User.objects.filter(
-            profil__role='TECHNICIEN',
-            is_active=True
-        ).order_by('first_name', 'last_name')
-        
-        # Améliorer les labels
-        self.fields['titre'].label = "Titre de l'intervention"
-        self.fields['description_detaillee'].label = "Description detaillee"
-        self.fields['type_OT'].label = "Type d'ordre de travail"
-        self.fields['intervention'].label = "Intervention à réaliser"
-        self.fields['asset'].label = "Équipement concerné"
-        self.fields['priorite'].label = "Niveau de priorité"
-        self.fields['date_prevue_debut'].label = "Date et heure prévues"
-        self.fields['assigne_a_technicien'].label = "Technicien assigné"
-        self.fields['assigne_a_equipe'].label = "Équipe assignée"
-        
-        # Ajouter des textes d'aide
-        self.fields['titre'].help_text = "Donnez un titre descriptif et précis à votre ordre de travail"
-        self.fields['intervention'].help_text = "Choisissez le type d'intervention selon la procédure définie"
-        self.fields['asset'].help_text = "Sélectionnez l'équipement sur lequel intervenir"
-        self.fields['date_prevue_debut'].help_text = "Planifiez quand cette intervention doit avoir lieu"
-        self.fields['assigne_a_technicien'].help_text = "Optionnel: assignez un technicien spécifique"
-        self.fields['assigne_a_equipe'].help_text = "Optionnel: assignez une équipe complète"
-        
-        # Rendre certains champs obligatoires
-        self.fields['titre'].required = True
-        self.fields['intervention'].required = True
-        self.fields['asset'].required = True
-        self.fields['date_prevue_debut'].required = True
-        
-        # Rendre l'assignation optionnelle
-        self.fields['assigne_a_technicien'].required = False
-        self.fields['assigne_a_equipe'].required = False
-    
-    def clean(self):
-        """Validation personnalisée du formulaire."""
-        cleaned_data = super().clean()
-        
-        # Vérifier qu'au moins un technicien ou une équipe est assignée
-        technicien = cleaned_data.get('assigne_a_technicien')
-        equipe = cleaned_data.get('assigne_a_equipe')
-        
-        if not technicien and not equipe:
-            raise forms.ValidationError(
-                "Vous devez assigner soit un technicien, soit une équipe à cet ordre de travail."
-            )
-        
-        # Vérifier que la date n'est pas trop dans le passé
-        date_prevue = cleaned_data.get('date_prevue_debut')
-        if date_prevue and date_prevue < timezone.now() - timedelta(hours=1):
-            raise forms.ValidationError(
-                "La date prévue ne peut pas être antérieure à une heure."
-            )
-        
-        return cleaned_data
-    
-    def save(self, commit=True):
-        """Sauvegarde personnalisée avec calculs automatiques."""
-        instance = super().save(commit=False)
-        
-        if commit:
-            instance.save()
-        
-        return instance
 
 class OrdreDeTravailEditForm(forms.ModelForm):
-    """Formulaire pour la modification d'un Ordre de Travail existant."""
+    """Formulaire pour modifier un ordre de travail existant."""
     
     class Meta:
         model = OrdreDeTravail
         fields = [
-            'titre','description_detaillee', 'type_OT', 'priorite', 'date_prevue_debut',
-            'assigne_a_technicien', 'assigne_a_equipe', 'statut'
+            'titre', 'description_detaillee', 'type_OT', 'priorite', 
+            'date_prevue_debut', 'assigne_a_technicien', 'assigne_a_equipe', 'statut'
         ]
+        
+        labels = {
+            'titre': 'Titre',
+            'description_detaillee': 'Description détaillée',
+            'type_OT': 'Type d\'ordre de travail',
+            'priorite': 'Priorité',
+            'date_prevue_debut': 'Date prévue de début',
+            'assigne_a_technicien': 'Technicien assigné',
+            'assigne_a_equipe': 'Équipe assignée',
+            'statut': 'Statut',
+        }
+        
         widgets = {
             'titre': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             }),
-            'description_detaillee': forms.TextInput(attrs={
+            'description_detaillee': forms.Textarea(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Ex: Maintenance préventive pompe A1'
+                'rows': 3,
+                'placeholder': 'Description détaillée...'
             }),
             'type_OT': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
@@ -343,115 +265,197 @@ class OrdreDeTravailEditForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             }),
         }
-        labels = {
-            'titre': _("Titre de l'Ordre de Travail"),
-            'description_detaillee': _("Description detaillee l'Ordre de Travail"),
-            'type_OT': _("Type d'Ordre de Travail"),
-            'priorite': _('Priorité'),
-            'date_prevue_debut': _('Date et heure prévues'),
-            'assigne_a_technicien': _('Assigner à un technicien'),
-            'assigne_a_equipe': _('Assigner à une équipe'),
-            'statut': _("Statut de l'Ordre de Travail"),
-        }
-
-# ==============================================================================
-# FORMULAIRES POUR L'EXÉCUTION DES INTERVENTIONS
-# ==============================================================================
-
-class ReponseForm(forms.ModelForm):
-    """Formulaire pour saisir une réponse à un point de contrôle."""
-    
-    class Meta:
-        model = Reponse
-        fields = ['valeur']
-        widgets = {
-            'valeur': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            }),
-        }
-    
-    def __init__(self, *args, point_de_controle=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        if point_de_controle:
-            self.point_de_controle = point_de_controle
-            
-            # Adapter le widget selon le type de champ
-            if point_de_controle.type_champ == 'BOOLEAN':
-                self.fields['valeur'].widget = forms.Select(
-                    choices=[('', '-- Sélectionner --'), ('OUI', 'Oui'), ('NON', 'Non')],
-                    attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'}
-                )
-            elif point_de_controle.type_champ == 'SELECT' and point_de_controle.options:
-                choices = [('', '-- Sélectionner --')]
-                for option in point_de_controle.options.split(';'):
-                    if option.strip():
-                        choices.append((option.strip(), option.strip()))
-                self.fields['valeur'].widget = forms.Select(
-                    choices=choices,
-                    attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'}
-                )
-            elif point_de_controle.type_champ == 'NUMBER':
-                self.fields['valeur'].widget = forms.NumberInput(attrs={
-                    'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                })
-            elif point_de_controle.type_champ == 'TEXTAREA':
-                self.fields['valeur'].widget = forms.Textarea(attrs={
-                    'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                    'rows': 3
-                })
-            elif point_de_controle.type_champ == 'DATE':
-                self.fields['valeur'].widget = forms.DateInput(attrs={
-                    'type': 'date',
-                    'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                })
-            elif point_de_controle.type_champ == 'TIME':
-                self.fields['valeur'].widget = forms.TimeInput(attrs={
-                    'type': 'time',
-                    'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                })
-            elif point_de_controle.type_champ == 'DATETIME':
-                self.fields['valeur'].widget = forms.DateTimeInput(attrs={
-                    'type': 'datetime-local',
-                    'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                })
-            
-            # Définir si le champ est obligatoire
-            self.fields['valeur'].required = point_de_controle.est_obligatoire
-            
-            # Ajouter l'aide si disponible
-            if point_de_controle.aide:
-                self.fields['valeur'].help_text = point_de_controle.aide
+        # Formater la date pour le champ datetime-local
+        if self.instance and self.instance.date_prevue_debut:
+            # Convertir au format requis par datetime-local : YYYY-MM-DDTHH:MM
+            self.initial['date_prevue_debut'] = self.instance.date_prevue_debut.strftime('%Y-%m-%dT%H:%M')
+# ==============================================================================
+# FORMULAIRES POUR LES ASSETS
+# ==============================================================================
 
-class RapportExecutionForm(forms.ModelForm):
-    """Formulaire pour créer/modifier un rapport d'exécution."""
+class AssetForm(forms.ModelForm):
+    """Formulaire pour créer/modifier un asset."""
     
     class Meta:
-        model = RapportExecution
-        fields = ['statut_rapport', 'date_execution_debut', 'date_execution_fin', 'commentaire_global']
+        model = Asset
+        fields = [
+            'nom', 'reference', 'categorie', 'marque', 'modele', 'statut',
+            'criticite', 'localisation_texte', 'latitude', 'longitude',
+            'adresse_complete', 'nb_fibres_total', 'nb_fibres_utilisees',
+            'niveau_hierarchique', 'type_connecteur'
+        ]
+        
+        labels = {
+            'nom': 'Nom',
+            'reference': 'Référence',
+            'categorie': 'Catégorie',
+            'marque': 'Marque',
+            'modele': 'Modèle',
+            'statut': 'Statut',
+            'criticite': 'Criticité',
+            'localisation_texte': 'Localisation',
+            'latitude': 'Latitude',
+            'longitude': 'Longitude',
+            'adresse_complete': 'Adresse complète',
+            'nb_fibres_total': 'Nb fibres total',
+            'nb_fibres_utilisees': 'Nb fibres utilisées',
+            'niveau_hierarchique': 'Niveau hiérarchique',
+            'type_connecteur': 'Type de connecteur',
+        }
+        
         widgets = {
-            'statut_rapport': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            }),
-            'date_execution_debut': forms.DateTimeInput(attrs={
-                'type': 'datetime-local',
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            }),
-            'date_execution_fin': forms.DateTimeInput(attrs={
-                'type': 'datetime-local',
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            }),
-            'commentaire_global': forms.Textarea(attrs={
+            'nom': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                'rows': 4,
-                'placeholder': 'Commentaire général sur l\'intervention...'
+                'placeholder': 'Ex: Pompe centrifuge P-101'
+            }),
+            'reference': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Ex: P-101'
+            }),
+            'categorie': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            }),
+            'marque': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            }),
+            'modele': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            }),
+            'statut': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            }),
+            'criticite': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            }),
+            'localisation_texte': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Ex: Bâtiment A - Niveau 1'
+            }),
+            'latitude': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'step': 'any',
+                'placeholder': '48.8566'
+            }),
+            'longitude': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'step': 'any',
+                'placeholder': '2.3522'
+            }),
+            'adresse_complete': forms.Textarea(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'rows': 2,
+                'placeholder': 'Adresse complète...'
+            }),
+            'nb_fibres_total': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'min': '0'
+            }),
+            'nb_fibres_utilisees': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'min': '0'
+            }),
+            'niveau_hierarchique': forms.NumberInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'min': '1',
+                'max': '4'
+            }),
+            'type_connecteur': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             }),
         }
+
+# ==============================================================================
+# FORMULAIRES POUR LES PROFILS UTILISATEURS
+# ==============================================================================
+
+class ProfilUtilisateurForm(forms.ModelForm):
+    """Formulaire pour créer/modifier un profil utilisateur."""
+    
+    class Meta:
+        model = ProfilUtilisateur
+        fields = ['role', 'telephone']  # SEULEMENT les vrais champs du modèle
+        
         labels = {
-            'statut_rapport': 'Statut du rapport',
-            'date_execution_debut': 'Date et heure de début',
-            'date_execution_fin': 'Date et heure de fin',
-            'commentaire_global': 'Commentaire général',
+            'role': 'Rôle',
+            'telephone': 'Téléphone',
+        }
+        
+        widgets = {
+            'role': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            }),
+            'telephone': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': '+33 1 23 45 67 89'
+            }),
+        }
+
+class UserUpdateForm(forms.ModelForm):
+    """Formulaire pour modifier les informations utilisateur."""
+    
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+        
+        labels = {
+            'first_name': 'Prénom',
+            'last_name': 'Nom',
+            'email': 'Email',
+        }
+        
+        widgets = {
+            'first_name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            }),
+        }
+
+class CustomPasswordChangeForm(PasswordChangeForm):
+    """Formulaire personnalisé pour le changement de mot de passe."""
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Personnalisation des labels
+        self.fields['old_password'].label = 'Ancien mot de passe'
+        self.fields['new_password1'].label = 'Nouveau mot de passe'
+        self.fields['new_password2'].label = 'Confirmation du nouveau mot de passe'
+        
+        # Ajout des classes CSS
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            })
+
+# ==============================================================================
+# FORMULAIRES POUR LES COMMENTAIRES ET ACTIONS
+# ==============================================================================
+
+class CommentaireOTForm(forms.ModelForm):
+    """Formulaire pour ajouter un commentaire à un ordre de travail."""
+    
+    class Meta:
+        model = CommentaireOT
+        fields = ['contenu']
+        
+        labels = {
+            'contenu': 'Commentaire',
+        }
+        
+        widgets = {
+            'contenu': forms.Textarea(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'rows': 3,
+                'placeholder': 'Ajouter un commentaire...'
+            }),
         }
 
 class ActionCorrectiveForm(forms.ModelForm):
@@ -460,6 +464,15 @@ class ActionCorrectiveForm(forms.ModelForm):
     class Meta:
         model = ActionCorrective
         fields = ['titre', 'description', 'priorite', 'assigne_a', 'date_echeance']
+        
+        labels = {
+            'titre': 'Titre',
+            'description': 'Description',
+            'priorite': 'Priorité',
+            'assigne_a': 'Assigné à',
+            'date_echeance': 'Date d\'échéance',
+        }
+        
         widgets = {
             'titre': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
@@ -481,27 +494,61 @@ class ActionCorrectiveForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             }),
         }
-        labels = {
-            'titre': 'Titre',
-            'description': 'Description',
-            'priorite': 'Priorité',
-            'assigne_a': 'Assigné à',
-            'date_echeance': 'Date d\'échéance',
-        }
 
-class CommentaireOTForm(forms.ModelForm):
-    """Formulaire pour ajouter un commentaire à un ordre de travail."""
+# ==============================================================================
+# FORMULAIRES POUR L'EXÉCUTION DES INTERVENTIONS
+# ==============================================================================
+
+class ReponseForm(forms.ModelForm):
+    """Formulaire pour saisir une réponse à un point de contrôle."""
     
     class Meta:
-        model = CommentaireOT
-        fields = ['contenu']
+        model = Reponse
+        fields = ['valeur']  # Le modèle Reponse n'a qu'un champ 'valeur'
+        
+        labels = {
+            'valeur': 'Réponse',
+        }
+        
         widgets = {
-            'contenu': forms.Textarea(attrs={
+            'valeur': forms.Textarea(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
                 'rows': 3,
-                'placeholder': 'Ajouter un commentaire...'
+                'placeholder': 'Saisir la réponse...'
             }),
         }
-        labels = {
-            'contenu': 'Commentaire',
-        }
+    
+    def __init__(self, *args, **kwargs):
+        point_controle = kwargs.pop('point_controle', None)
+        super().__init__(*args, **kwargs)
+        
+        if point_controle:
+            # Adapter le widget selon le type de point de contrôle
+            if point_controle.type_champ == 'TEXT':
+                self.fields['valeur'].widget = forms.TextInput(attrs={
+                    'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                })
+            elif point_controle.type_champ == 'NUMBER':
+                self.fields['valeur'].widget = forms.NumberInput(attrs={
+                    'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                })
+            elif point_controle.type_champ == 'BOOLEAN':
+                self.fields['valeur'].widget = forms.Select(choices=[
+                    ('', '-- Choisir --'),
+                    ('OUI', 'Oui'),
+                    ('NON', 'Non')
+                ], attrs={
+                    'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                })
+            elif point_controle.type_champ == 'SELECT' and point_controle.options:
+                choices = [('', '-- Choisir --')]
+                for option in point_controle.options.split(';'):
+                    choices.append((option.strip(), option.strip()))
+                self.fields['valeur'].widget = forms.Select(choices=choices, attrs={
+                    'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                })
+            elif point_controle.type_champ == 'DATE':
+                self.fields['valeur'].widget = forms.DateInput(attrs={
+                    'type': 'date',
+                    'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                })
