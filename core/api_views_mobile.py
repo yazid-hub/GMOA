@@ -1008,3 +1008,312 @@ class AssetMobileViewSet(viewsets.ReadOnlyModelViewSet):
             role = 'OPERATEUR'
         
         return role in ['MANAGER', 'ADMIN']
+    
+# Améliorations suggérées pour le backend mobile
+
+# 1. Ajouter dans api_views_mobile.py - ViewSet de synchronisation manquant
+
+class SynchronisationMobileViewSet(viewsets.ViewSet):
+    """
+    API de synchronisation pour l'application mobile
+    """
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    @action(detail=False, methods=['get'])
+    def pull_data(self, request):
+        """
+        Télécharge toutes les données nécessaires pour l'utilisateur
+        """
+        user = request.user
+        last_sync = request.query_params.get('last_sync')
+        
+        # Récupérer les OT assignés
+        ot_filter = Q(assigne_a_technicien=user)
+        if hasattr(user, 'profil') and hasattr(user.profil, 'equipe_id'):
+            ot_filter |= Q(assigne_a_equipe_id=user.profil.equipe_id)
+        
+        if last_sync:
+            ot_filter &= Q(date_derniere_maj__gte=last_sync)
+        
+        ordres_travail = OrdreDeTravail.objects.filter(ot_filter).select_related(
+            'intervention', 'asset', 'statut'
+        )
+        
+        # Récupérer les interventions associées
+        intervention_ids = ordres_travail.values_list('intervention_id', flat=True)
+        interventions = Intervention.objects.filter(
+            id__in=intervention_ids
+        ).prefetch_related('operations__points_de_controle')
+        
+        # Récupérer les assets
+        asset_ids = ordres_travail.values_list('asset_id', flat=True)
+        assets = Asset.objects.filter(id__in=asset_ids)
+        
+        return Response({
+            'success': True,
+            'timestamp': timezone.now(),
+            'data': {
+                'ordres_travail': OrdreDeTravailMobileSerializer(ordres_travail, many=True, context={'request': request}).data,
+                'interventions': InterventionMobileSerializer(interventions, many=True, context={'request': request}).data,
+                'assets': AssetMobileSerializer(assets, many=True, context={'request': request}).data,
+            },
+            'counts': {
+                'ordres_travail': ordres_travail.count(),
+                'interventions': interventions.count(),
+                'assets': assets.count(),
+            }
+        })
+    
+    @action(detail=False, methods=['post'])
+    def push_data(self, request):
+        """
+        Upload des données modifiées depuis le mobile
+        """
+        data = request.data
+        results = {
+            'success': True,
+            'processed': 0,
+            'errors': [],
+            'warnings': []
+        }
+        
+        # Traiter les rapports d'exécution
+        if 'rapports_execution' in data:
+            for rapport_data in data['rapports_execution']:
+                try:
+                    self._process_rapport_execution(rapport_data, request.user)
+                    results['processed'] += 1
+                except Exception as e:
+                    results['errors'].append(f"Rapport {rapport_data.get('id', 'N/A')}: {str(e)}")
+        
+        # Traiter les réponses
+        if 'reponses' in data:
+            for reponse_data in data['reponses']:
+                try:
+                    self._process_reponse(reponse_data, request.user)
+                    results['processed'] += 1
+                except Exception as e:
+                    results['errors'].append(f"Réponse {reponse_data.get('id', 'N/A')}: {str(e)}")
+        
+        # Traiter les demandes de réparation
+        if 'demandes_reparation' in data:
+            for demande_data in data['demandes_reparation']:
+                try:
+                    self._process_demande_reparation(demande_data, request.user)
+                    results['processed'] += 1
+                except Exception as e:
+                    results['errors'].append(f"Demande {demande_data.get('id', 'N/A')}: {str(e)}")
+        
+        if results['errors']:
+            results['success'] = len(results['errors']) < results['processed']
+        
+        return Response(results)
+    
+    @action(detail=False, methods=['get'])
+    def status(self, request):
+        """
+        Statut de synchronisation pour l'utilisateur
+        """
+        user = request.user
+        
+        # Compter les OT assignés
+        ot_count = OrdreDeTravail.objects.filter(
+            Q(assigne_a_technicien=user) | 
+            Q(assigne_a_equipe__membres=user)
+        ).count()
+        
+        # Compter les rapports en cours
+        rapports_en_cours = RapportExecution.objects.filter(
+            cree_par=user,
+            statut_rapport__in=['EN_COURS', 'BROUILLON']
+        ).count()
+        
+        # Dernière activité
+        derniere_activite = RapportExecution.objects.filter(
+            cree_par=user
+        ).order_by('-date_derniere_maj').first()
+        
+        return Response({
+            'user_id': user.id,
+            'ordres_travail_assignes': ot_count,
+            'rapports_en_cours': rapports_en_cours,
+            'derniere_activite': derniere_activite.date_derniere_maj if derniere_activite else None,
+            'server_time': timezone.now(),
+        })
+    
+    def _process_rapport_execution(self, data, user):
+        """Traite un rapport d'exécution"""
+        # Logique de traitement
+        pass
+    
+    def _process_reponse(self, data, user):
+        """Traite une réponse"""
+        # Logique de traitement
+        pass
+    
+    def _process_demande_reparation(self, data, user):
+        """Traite une demande de réparation"""
+        # Logique de traitement
+        pass
+
+# 2. Ajouter endpoint pour les statistiques mobile
+
+@action(detail=False, methods=['get'])
+def dashboard_stats(self, request):
+    """
+    Statistiques pour le dashboard mobile
+    """
+    user = request.user
+    
+    # OT assignés
+    ot_filter = Q(assigne_a_technicien=user)
+    if hasattr(user, 'profil') and hasattr(user.profil, 'equipe_id'):
+        ot_filter |= Q(assigne_a_equipe_id=user.profil.equipe_id)
+    
+    ordres_travail = OrdreDeTravail.objects.filter(ot_filter)
+    
+    stats = {
+        'taches_assignees': ordres_travail.count(),
+        'taches_en_cours': ordres_travail.filter(statut__nom='EN_COURS').count(),
+        'taches_terminees_aujourd_hui': ordres_travail.filter(
+            statut__est_statut_final=True,
+            date_fin_reelle__date=timezone.now().date()
+        ).count(),
+        'taches_en_retard': ordres_travail.filter(
+            date_prevue_debut__lt=timezone.now(),
+            statut__est_statut_final=False
+        ).count(),
+    }
+    
+    return Response(stats)
+
+# 3. Ajouter endpoint pour les notifications
+
+@action(detail=False, methods=['get'])
+def notifications(self, request):
+    """
+    Notifications pour l'utilisateur mobile
+    """
+    user = request.user
+    limit = int(request.query_params.get('limit', 20))
+    
+    # Récupérer les notifications récentes
+    notifications = []
+    
+    # Nouveaux OT assignés
+    nouveaux_ot = OrdreDeTravail.objects.filter(
+        Q(assigne_a_technicien=user) | Q(assigne_a_equipe__membres=user),
+        date_creation__gte=timezone.now() - timedelta(days=7)
+    ).order_by('-date_creation')[:limit]
+    
+    for ot in nouveaux_ot:
+        notifications.append({
+            'id': f"ot_{ot.id}",
+            'type': 'INFO',
+            'title': 'Nouvel ordre de travail',
+            'message': f"{ot.titre} assigné",
+            'timestamp': ot.date_creation,
+            'ot_id': ot.id,
+            'read': False
+        })
+    
+    return Response({
+        'notifications': notifications[:limit],
+        'unread_count': len([n for n in notifications if not n['read']])
+    })
+
+# 4. Améliorer l'endpoint de scan QR/code-barres
+
+@action(detail=False, methods=['post'])
+def scan_qr(self, request):
+    """
+    Scan d'un QR code ou code-barres
+    """
+    code = request.data.get('code', '').strip()
+    
+    if not code:
+        return Response({
+            'error': 'Code requis'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Rechercher l'asset
+    try:
+        asset = Asset.objects.get(
+            Q(qr_code_identifier=code) | Q(code_barre=code)
+        )
+    except Asset.DoesNotExist:
+        return Response({
+            'error': 'Asset non trouvé',
+            'code': code
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # OT en cours sur cet asset
+    ot_actifs = OrdreDeTravail.objects.filter(
+        asset=asset,
+        statut__est_statut_final=False
+    ).select_related('intervention', 'statut')
+    
+    # Dernière maintenance
+    derniere_maintenance = OrdreDeTravail.objects.filter(
+        asset=asset,
+        statut__est_statut_final=True
+    ).order_by('-date_fin_reelle').first()
+    
+    return Response({
+        'success': True,
+        'asset': AssetMobileSerializer(asset, context={'request': request}).data,
+        'ordres_travail_actifs': OrdreDeTravailMobileSerializer(
+            ot_actifs, many=True, context={'request': request}
+        ).data,
+        'derniere_maintenance': OrdreDeTravailMobileSerializer(
+            derniere_maintenance, context={'request': request}
+        ).data if derniere_maintenance else None,
+        'peut_creer_ot': self._peut_creer_ot(request.user),
+        'scan_timestamp': timezone.now()
+    })
+
+# 5. Ajouter gestion des erreurs et monitoring
+
+# Dans settings.py
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'mobile_api': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'logs/mobile_api.log',
+        },
+    },
+    'loggers': {
+        'mobile_api': {
+            'handlers': ['mobile_api'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
+
+# 6. Ajouter rate limiting spécifique mobile
+# Dans middleware.py - améliorer MobileAPIMiddleware
+
+class ImprovedMobileAPIMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+    
+    def __call__(self, request):
+        # Rate limiting par endpoint
+        if request.path.startswith('/api/mobile/'):
+            endpoint = request.path.split('/')[-1]
+            limits = {
+                'sync': 60,  # 60 requêtes/heure pour sync
+                'medias': 100,  # 100 uploads/heure
+                'default': 200  # 200 requêtes/heure par défaut
+            }
+            
+            limit = limits.get(endpoint, limits['default'])
+            # Implémenter la logique de rate limiting
+        
+        response = self.get_response(request)
+        return response
