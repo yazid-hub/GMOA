@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.base,
     color: theme.colors.white,
     opacity: 0.9,
-    fontFamily: theme.typography.fonts.regular,
+   fontFamily: theme.typography.fontFamily.sans,
   },
   userName: {
     fontSize: theme.typography.sizes['2xl'],
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.sm,
     color: theme.colors.white,
     opacity: 0.8,
-    fontFamily: theme.typography.fonts.regular,
+   fontFamily: theme.typography.fontFamily.sans,
   },
   scrollContainer: {
     flex: 1,
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
   },
   actionSubtitle: {
     fontSize: theme.typography.sizes.sm,
-    fontFamily: theme.typography.fonts.regular,
+   fontFamily: theme.typography.fontFamily.sans,
     color: theme.colors.text.secondary,
     textAlign: 'center',
   },
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
   },
   workOrderSubtitle: {
     fontSize: theme.typography.sizes.sm,
-    fontFamily: theme.typography.fonts.regular,
+   fontFamily: theme.typography.fontFamily.sans,
     color: theme.colors.text.secondary,
   },
   workOrderMeta: {
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: theme.typography.sizes.sm,
-    fontFamily: theme.typography.fonts.regular,
+   fontFamily: theme.typography.fontFamily.sans,
     color: theme.colors.text.tertiary,
     marginLeft: theme.spacing[2],
   },
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: theme.typography.sizes.base,
-    fontFamily: theme.typography.fonts.regular,
+   fontFamily: theme.typography.fontFamily.sans,
     color: theme.colors.text.secondary,
     textAlign: 'center',
     lineHeight: 22,
@@ -709,12 +709,12 @@ const styles = StyleSheet.create({
   },
   activitySubtitle: {
     fontSize: theme.typography.sizes.sm,
-    fontFamily: theme.typography.fonts.regular,
+   fontFamily: theme.typography.fontFamily.sans,
     color: theme.colors.text.secondary,
   },
   activityTime: {
     fontSize: theme.typography.sizes.sm,
-    fontFamily: theme.typography.fonts.regular,
+   fontFamily: theme.typography.fontFamily.sans,
     color: theme.colors.text.tertiary,
   },
   infoCard: {
@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: theme.typography.sizes.sm,
-    fontFamily: theme.typography.fonts.regular,
+   fontFamily: theme.typography.fontFamily.sans,
     color: theme.colors.primary[600],
     lineHeight: 20,
   },

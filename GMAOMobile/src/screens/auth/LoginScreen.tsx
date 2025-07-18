@@ -1,349 +1,515 @@
-// src/screens/auth/LoginScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  StatusBar,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
-  Image,
+  TouchableWithoutFeedback,
+  Keyboard,
+  StatusBar,
   Animated,
-  Dimensions,
+  Dimensions
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
-import { useAppDispatch, useAppSelector } from '../../store/store';
-import { loginUser, selectAuthLoading, selectAuthError } from '../../store/slices/authSlice';
-import { Button, Input, Card } from '../../components/common';
-import { theme } from '../../styles/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import Svg, { Path } from 'react-native-svg';
 
-const { width, height } = Dimensions.get('window');
+// Types pour la navigation
+interface NavigationProp {
+  replace: (screen: string) => void;
+}
 
-const LoginScreen: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const loading = useAppSelector(selectAuthLoading);
-  const error = useAppSelector(selectAuthError);
+// Icônes SVG
+const UserIcon = () => (
+  <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <Path d="M10 10C12.7614 10 15 7.76142 15 5C15 2.23858 12.7614 0 10 0C7.23858 0 5 2.23858 5 5C5 7.76142 7.23858 10 10 10Z" fill="#64748B"/>
+    <Path d="M10 12C4.47715 12 0 16.4772 0 22H20C20 16.4772 15.5228 12 10 12Z" fill="#64748B"/>
+  </Svg>
+);
 
-  const [credentials, setCredentials] = useState({
-    username: '',
-    password: '',
-  });
+const LockIcon = () => (
+  <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <Path d="M15.8333 9.16667H4.16667C3.24619 9.16667 2.5 9.91286 2.5 10.8333V16.6667C2.5 17.5871 3.24619 18.3333 4.16667 18.3333H15.8333C16.7538 18.3333 17.5 17.5871 17.5 16.6667V10.8333C17.5 9.91286 16.7538 9.16667 15.8333 9.16667Z" fill="#64748B"/>
+    <Path d="M5.83333 9.16667V5.83333C5.83333 4.72827 6.27232 3.66846 7.05372 2.88706C7.83512 2.10565 8.89493 1.66667 10 1.66667C11.1051 1.66667 12.1649 2.10565 12.9463 2.88706C13.7277 3.66846 14.1667 4.72827 14.1667 5.83333V9.16667" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
+const EyeIcon = ({ visible }: { visible: boolean }) => (
+  <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    {visible ? (
+      <>
+        <Path d="M10 4.16667C3.33333 4.16667 1.66667 10 1.66667 10C1.66667 10 3.33333 15.8333 10 15.8333C16.6667 15.8333 18.3333 10 18.3333 10C18.3333 10 16.6667 4.16667 10 4.16667Z" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <Path d="M10 12.5C11.3807 12.5 12.5 11.3807 12.5 10C12.5 8.61929 11.3807 7.5 10 7.5C8.61929 7.5 7.5 8.61929 7.5 10C7.5 11.3807 8.61929 12.5 10 12.5Z" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </>
+    ) : (
+      <>
+        <Path d="M2.5 2.5L17.5 17.5" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <Path d="M8.36667 8.36667C8.12779 8.60554 8 8.92971 8 9.26667C8 9.60362 8.12779 9.92779 8.36667 10.1667C8.60554 10.4055 8.92971 10.5333 9.26667 10.5333C9.60362 10.5333 9.92779 10.4055 10.1667 10.1667" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <Path d="M15.4667 15.4667C13.9067 16.6133 12.0333 17.2667 10 17.2667C5.16667 17.2667 1.66667 10 1.66667 10C2.76667 7.85333 4.34667 5.99333 6.26667 4.86" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <Path d="M11.7667 6.76667C12.7583 7.11114 13.5583 7.91114 14.0333 8.9" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <Path d="M6.26667 12.1C6.74333 13.3333 7.76667 14.3567 9.26667 14.3567C9.8 14.3567 10.3 14.2333 10.7333 14.0333" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <Path d="M18.3333 10C18.3333 10 17.2 12.3333 15.4667 14.1333" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </>
+    )}
+  </Svg>
+);
+
+interface LoginScreenProps {
+  navigation?: NavigationProp;
+}
+
+const APP_VERSION = '1.0.0';
+const LOGO_URI = 'https://via.placeholder.com/150x80?text=GMOA';
+
+const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
+  // États
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [slideAnim] = useState(new Animated.Value(height));
-
+  const [rememberMe, setRememberMe] = useState(false);
+  
+  // Références pour les champs de saisie
+  const passwordInputRef = useRef<TextInput>(null);
+  
+  // Animations
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const formTranslateY = useRef(new Animated.Value(50)).current;
+  
+  // Hook de navigation
+  const nav = useNavigation<NavigationProp>();
+  const navigationToUse = navigation || nav;
+  
   useEffect(() => {
     // Animation d'entrée
     Animated.parallel([
-      Animated.timing(fadeAnim, {
+      Animated.timing(logoOpacity, {
         toValue: 1,
         duration: 1000,
-        useNativeDriver: true,
+        useNativeDriver: true
       }),
-      Animated.spring(slideAnim, {
+      Animated.timing(formTranslateY, {
         toValue: 0,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }),
+        duration: 800,
+        useNativeDriver: true
+      })
     ]).start();
-  }, []);
-
-  const handleLogin = async () => {
-    if (!credentials.username.trim() || !credentials.password.trim()) {
-      return;
+    
+    // Vérifier si des identifiants sont sauvegardés
+    loadSavedCredentials();
+  }, [logoOpacity, formTranslateY]);
+  
+  const loadSavedCredentials = async () => {
+    try {
+      // Exemple d'implémentation avec AsyncStorage
+      // const savedUsername = await AsyncStorage.getItem('username');
+      // const savedPassword = await AsyncStorage.getItem('password');
+      // const savedRememberMe = await AsyncStorage.getItem('rememberMe');
+      
+      // if (savedUsername && savedPassword && savedRememberMe === 'true') {
+      //   setUsername(savedUsername);
+      //   setPassword(savedPassword);
+      //   setRememberMe(true);
+      // }
+      
+      console.log('Chargement des identifiants sauvegardés...');
+    } catch (error) {
+      console.error('Erreur lors du chargement des identifiants:', error);
     }
-
-    const result = await dispatch(loginUser({
-      username: credentials.username.trim(),
-      password: credentials.password,
-      device_id: 'mobile_app_v1', // TODO: Générer un ID unique par appareil
-    }));
-
-    // La navigation se fera automatiquement grâce au state management
+  };
+  
+  const saveCredentials = async () => {
+    try {
+      if (rememberMe) {
+        // await AsyncStorage.setItem('username', username);
+        // await AsyncStorage.setItem('password', password);
+        // await AsyncStorage.setItem('rememberMe', 'true');
+        console.log('Identifiants sauvegardés');
+      } else {
+        // await AsyncStorage.removeItem('username');
+        // await AsyncStorage.removeItem('password');
+        // await AsyncStorage.removeItem('rememberMe');
+        console.log('Identifiants supprimés');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+    }
+  };
+  
+  const validateInputs = (): boolean => {
+    if (!username.trim()) {
+      setErrorMessage("Veuillez saisir votre nom d'utilisateur");
+      return false;
+    }
+    
+    if (!password.trim()) {
+      setErrorMessage('Veuillez saisir votre mot de passe');
+      return false;
+    }
+    
+    if (username.length < 3) {
+      setErrorMessage("Le nom d'utilisateur doit contenir au moins 3 caractères");
+      return false;
+    }
+    
+    if (password.length < 6) {
+      setErrorMessage('Le mot de passe doit contenir au moins 6 caractères');
+      return false;
+    }
+    
+    setErrorMessage('');
+    return true;
   };
 
-  const isFormValid = credentials.username.trim() && credentials.password.trim();
+  const handleLogin = async () => {
+    if (!validateInputs()) {
+      return;
+    }
+    
+    setIsLoading(true);
+    setErrorMessage('');
+    
+    try {
+      // Simuler un appel API
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Exemple d'appel API réel
+      // const response = await fetch('https://api.example.com/login', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify({ 
+      //     username: username.trim(), 
+      //     password: password.trim() 
+      //   }),
+      // });
+      
+      // if (!response.ok) {
+      //   throw new Error('Erreur de connexion');
+      // }
+      
+      // const data = await response.json();
+      
+      // Sauvegarder les identifiants si nécessaire
+      await saveCredentials();
+      
+      // Naviguer vers l'écran principal
+      if (navigationToUse) {
+        navigationToUse.replace('MainApp');
+      } else {
+        console.log('Connexion réussie pour:', username);
+        Alert.alert('Succès', 'Connexion réussie!');
+      }
+      
+    } catch (error) {
+      console.error('Erreur de connexion:', error);
+      setErrorMessage('Identifiants incorrects. Veuillez réessayer.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleForgotPassword = () => {
+    Alert.alert(
+      'Mot de passe oublié',
+      'Veuillez contacter votre administrateur système pour réinitialiser votre mot de passe.',
+      [
+        { text: 'OK', style: 'default' }
+      ]
+    );
+  };
+
+  const focusPasswordInput = () => {
+    passwordInputRef.current?.focus();
+  };
+
+  const clearError = () => {
+    if (errorMessage) {
+      setErrorMessage('');
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={theme.colors.primary[600]}
-        translucent
-      />
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor="#3b82f6" />
       
-      {/* Background avec gradient effet */}
-      <View style={styles.backgroundGradient}>
-        <View style={styles.circleDecoration1} />
-        <View style={styles.circleDecoration2} />
-      </View>
-
       <KeyboardAvoidingView
-        style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        style={styles.container}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Header avec logo */}
-          <Animated.View 
-            style={[styles.header, { opacity: fadeAnim }]}
-          >
-            <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Icon name="settings" size={40} color={theme.colors.white} />
-              </View>
-            </View>
-            <Text style={styles.appTitle}>GMAO Mobile</Text>
-            <Text style={styles.subtitle}>
-              Gestion de Maintenance Assistée par Ordinateur
-            </Text>
-          </Animated.View>
-
-          {/* Formulaire de connexion */}
-          <Animated.View
-            style={[
-              styles.formContainer,
-              { transform: [{ translateY: slideAnim }] }
-            ]}
-          >
-            <Card variant="elevated" style={styles.loginCard}>
-              <View style={styles.cardHeader}>
-                <Icon name="log-in" size={24} color={theme.colors.primary[500]} />
-                <Text style={styles.cardTitle}>Connexion</Text>
-              </View>
-
-              {error && (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.innerContainer}>
+            <Animated.View 
+              style={[styles.logoContainer, { opacity: logoOpacity }]}
+            >
+              <Image
+                source={{ uri: LOGO_URI }}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+              <Text style={styles.subtitle}>Gestion de Maintenance et d'Opérations</Text>
+            </Animated.View>
+            
+            <Animated.View 
+              style={[
+                styles.formContainer, 
+                { transform: [{ translateY: formTranslateY }] }
+              ]}
+            >
+              <Text style={styles.formTitle}>Connexion</Text>
+              
+              {errorMessage ? (
                 <View style={styles.errorContainer}>
-                  <Icon name="alert-circle" size={20} color={theme.colors.error[500]} />
-                  <Text style={styles.errorText}>{error}</Text>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
                 </View>
-              )}
-
-              <View style={styles.formFields}>
-                <Input
-                  label="Nom d'utilisateur"
-                  placeholder="Entrez votre nom d'utilisateur"
-                  value={credentials.username}
-                  onChangeText={(text) => setCredentials(prev => ({ ...prev, username: text }))}
-                  leftIcon={<Icon name="user" size={20} color={theme.colors.gray[400]} />}
+              ) : null}
+              
+              <View style={styles.inputContainer}>
+                <View style={styles.iconContainer}>
+                  <UserIcon />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nom d'utilisateur"
+                  value={username}
+                  onChangeText={(text) => {
+                    setUsername(text);
+                    clearError();
+                  }}
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={focusPasswordInput}
+                  editable={!isLoading}
                 />
-
-                <Input
-                  label="Mot de passe"
-                  placeholder="Entrez votre mot de passe"
-                  value={credentials.password}
-                  onChangeText={(text) => setCredentials(prev => ({ ...prev, password: text }))}
+              </View>
+              
+              <View style={styles.inputContainer}>
+                <View style={styles.iconContainer}>
+                  <LockIcon />
+                </View>
+                <TextInput
+                  ref={passwordInputRef}
+                  style={styles.input}
+                  placeholder="Mot de passe"
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    clearError();
+                  }}
                   secureTextEntry={!showPassword}
-                  leftIcon={<Icon name="lock" size={20} color={theme.colors.gray[400]} />}
-                  rightIcon={
-                    <Icon 
-                      name={showPassword ? "eye-off" : "eye"} 
-                      size={20} 
-                      color={theme.colors.gray[400]}
-                      onPress={() => setShowPassword(!showPassword)}
-                    />
-                  }
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   returnKeyType="done"
                   onSubmitEditing={handleLogin}
+                  editable={!isLoading}
                 />
+                <TouchableOpacity 
+                  style={styles.eyeIconContainer}
+                  onPress={() => setShowPassword(prev => !prev)}
+                  disabled={isLoading}
+                >
+                  <EyeIcon visible={showPassword} />
+                </TouchableOpacity>
               </View>
-
-              <Button
-                variant="primary"
-                size="lg"
-                fullWidth
-                loading={loading}
-                disabled={!isFormValid}
+              
+              <View style={styles.optionsContainer}>
+                <TouchableOpacity 
+                  style={styles.rememberMeContainer}
+                  onPress={() => setRememberMe(prev => !prev)}
+                  disabled={isLoading}
+                >
+                  <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                    {rememberMe && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
+                  </View>
+                  <Text style={styles.rememberMeText}>Se souvenir de moi</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  onPress={handleForgotPassword}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <TouchableOpacity
+                style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
                 onPress={handleLogin}
-                style={styles.loginButton}
+                disabled={isLoading}
               >
-                Se connecter
-              </Button>
-
-              {/* Informations supplémentaires */}
-              <View style={styles.loginInfo}>
-                <View style={styles.infoRow}>
-                  <Icon name="wifi" size={16} color={theme.colors.success[500]} />
-                  <Text style={styles.infoText}>Fonctionne hors ligne</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Icon name="shield" size={16} color={theme.colors.primary[500]} />
-                  <Text style={styles.infoText}>Connexion sécurisée</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Icon name="sync" size={16} color={theme.colors.secondary[500]} />
-                  <Text style={styles.infoText}>Synchronisation automatique</Text>
-                </View>
-              </View>
-            </Card>
-          </Animated.View>
-
-          {/* Footer */}
-          <Animated.View 
-            style={[styles.footer, { opacity: fadeAnim }]}
-          >
-            <Text style={styles.footerText}>
-              Version 1.0.0 • Développé pour les techniciens terrain
-            </Text>
-          </Animated.View>
-        </ScrollView>
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Se connecter</Text>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+            
+            <Text style={styles.versionText}>Version {APP_VERSION}</Text>
+          </View>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#3b82f6',
+  },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.primary[500],
+    backgroundColor: '#3b82f6',
   },
-  backgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: theme.colors.primary[600],
-  },
-  circleDecoration1: {
-    position: 'absolute',
-    top: -100,
-    right: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: theme.colors.primary[400],
-    opacity: 0.3,
-  },
-  circleDecoration2: {
-    position: 'absolute',
-    bottom: -150,
-    left: -150,
-    width: 400,
-    height: 400,
-    borderRadius: 200,
-    backgroundColor: theme.colors.primary[700],
-    opacity: 0.2,
-  },
-  keyboardContainer: {
+  innerContainer: {
     flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: theme.spacing[4],
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: theme.spacing[6],
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: theme.spacing[8],
+    justifyContent: 'center',
+    padding: 20,
   },
   logoContainer: {
-    marginBottom: theme.spacing[4],
-  },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.white,
-    opacity: 0.9,
-    justifyContent: 'center',
     alignItems: 'center',
-    ...theme.shadows.lg,
+    marginBottom: 30,
   },
-  appTitle: {
-    fontSize: theme.typography.sizes['4xl'],
-    fontFamily: theme.typography.fonts.bold,
-    color: theme.colors.white,
-    textAlign: 'center',
-    marginBottom: theme.spacing[2],
+  logo: {
+    width: 150,
+    height: 80,
+    marginBottom: 10,
   },
   subtitle: {
-    fontSize: theme.typography.sizes.base,
-    fontFamily: theme.typography.fonts.regular,
-    color: theme.colors.white,
+    fontSize: 16,
+    color: '#ffffff',
     textAlign: 'center',
     opacity: 0.9,
-    lineHeight: 22,
+    paddingHorizontal: 20,
   },
   formContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  loginCard: {
-    padding: theme.spacing[6],
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius['2xl'],
-    ...theme.shadows.xl,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing[6],
-  },
-  cardTitle: {
-    fontSize: theme.typography.sizes['2xl'],
-    fontFamily: theme.typography.fonts.semiBold,
-    color: theme.colors.text.primary,
-    marginLeft: theme.spacing[2],
+  formTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 20,
+    textAlign: 'center',
   },
   errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.error[50],
-    padding: theme.spacing[3],
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing[4],
+    backgroundColor: '#fef2f2',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: theme.colors.error[200],
+    borderColor: '#fee2e2',
   },
   errorText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.error[700],
-    fontFamily: theme.typography.fonts.medium,
-    marginLeft: theme.spacing[2],
+    color: '#dc2626',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  iconContainer: {
+    paddingHorizontal: 12,
+  },
+  input: {
     flex: 1,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#1e293b',
   },
-  formFields: {
-    marginBottom: theme.spacing[6],
-    gap: theme.spacing[4],
+  eyeIconContainer: {
+    paddingHorizontal: 12,
   },
-  loginButton: {
-    marginBottom: theme.spacing[6],
-    ...theme.shadows.md,
+  optionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  loginInfo: {
-    gap: theme.spacing[3],
-  },
-  infoRow: {
+  rememberMeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  infoText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text.secondary,
-    fontFamily: theme.typography.fonts.regular,
-    marginLeft: theme.spacing[2],
-  },
-  footer: {
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 4,
+    marginRight: 8,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: theme.spacing[8],
   },
-  footerText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.white,
-    fontFamily: theme.typography.fonts.regular,
+  checkboxChecked: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
+  },
+  checkmark: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  rememberMeText: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#3b82f6',
+    fontWeight: '500',
+  },
+  loginButton: {
+    backgroundColor: '#3b82f6',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    shadowColor: '#1e40af',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  loginButtonDisabled: {
+    backgroundColor: '#93c5fd',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  loginButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  versionText: {
     textAlign: 'center',
-    opacity: 0.8,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+    marginTop: 16,
   },
 });
 
